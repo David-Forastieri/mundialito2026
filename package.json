@@ -1,0 +1,47 @@
+{
+  "name": "mundial-2026-prode",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "setup": "node scripts/setup.js",
+    "db:migrate": "supabase db push",
+    "db:types": "supabase gen types typescript --linked > src/types/database.types.ts",
+    "db:reset": "supabase db reset"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^3.9.0",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.47.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "lucide-react": "^0.469.0",
+    "nanoid": "^5.0.9",
+    "next": "16.2.6",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.54.0",
+    "sonner": "^1.7.2",
+    "tailwind-merge": "^2.6.0",
+    "web-push": "^3.6.7",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22.10.2",
+    "@types/react": "^19.0.2",
+    "@types/react-dom": "^19.0.2",
+    "@types/web-push": "^3.6.3",
+    "dotenv": "^16.4.7",
+    "eslint": "^9.17.0",
+    "eslint-config-next": "15.1.0",
+    "postcss": "^8.5.1",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.7.2"
+  }
+}

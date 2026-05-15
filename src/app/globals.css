@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+:root {
+  --brand: #FF8200;
+  --brand-dark: #E56800;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* PWA safe areas */
+.safe-top { padding-top: env(safe-area-inset-top); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom); }

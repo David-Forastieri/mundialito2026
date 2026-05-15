@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ── Lint & Type Check ─────────────────────────────
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+  # ── Build Check ───────────────────────────────────
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    env:
+      # Dummy values just to let Next.js build without real Supabase
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_placeholder_key_for_ci_build
+      SUPABASE_SECRET_KEY: sb_secret_placeholder_key_for_ci_build
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      WEBHOOK_SECRET: ci-placeholder-secret
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BPlaceholderVapidPublicKeyForCIBuildOnly
+      VAPID_PRIVATE_KEY: placeholder_vapid_private_key
+      VAPID_SUBJECT: mailto:ci@example.com
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next/
+          retention-days: 1
