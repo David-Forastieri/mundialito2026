@@ -1,4 +1,4 @@
-# ⚽ Mundial 2026 Prode
+# ⚽ Mundial 2026 Fixture Prode
 
 Plataforma PWA para el Mundial de Fútbol 2026. Fixture en tiempo real + sistema de predicciones competitivo en grupos cerrados.
 
