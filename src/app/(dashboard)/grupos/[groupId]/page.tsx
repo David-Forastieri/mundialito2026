@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import CopyInviteButton from './CopyInviteButton'
+import InviteButton from './InviteButton'
 import type { RankingEntry } from '@/types/ranking.types'
 
 export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
@@ -70,7 +70,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
             {member?.template_id ? 'Mi plantilla' : 'Cargar predicciones'}
           </div>
         </Link>
-        <CopyInviteButton inviteCode={group.invite_code} />
+        <InviteButton groupId={groupId} inviteCode={group.invite_code} />
       </div>
 
       <div>

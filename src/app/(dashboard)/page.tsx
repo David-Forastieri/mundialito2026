@@ -5,13 +5,17 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: upcomingMatches }, { data: memberships }] = await Promise.all([
+  const [{ data: upcomingMatches }, { count: totalGroups }, { data: memberships }] = await Promise.all([
     supabase
       .from('matches')
       .select('id, home_team, away_team, scheduled_at, status, stage')
       .in('status', ['scheduled', 'live'])
       .order('scheduled_at', { ascending: true })
       .limit(3),
+    supabase
+      .from('group_members')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', user!.id),
     supabase
       .from('group_members')
       .select('total_points, role, groups(id, name)')
@@ -36,7 +40,7 @@ export default async function HomePage() {
         <Link href="/grupos" className="bg-white border border-gray-200 rounded-2xl p-5 block">
           <div className="text-2xl mb-1">🏆</div>
           <div className="font-bold text-gray-900">Mis Grupos</div>
-          <div className="text-xs text-gray-500 mt-0.5">{memberships?.length ?? 0} grupos</div>
+          <div className="text-xs text-gray-500 mt-0.5">{totalGroups ?? 0} grupos</div>
         </Link>
       </div>
 
@@ -54,8 +58,9 @@ export default async function HomePage() {
                 {match.status === 'live' ? (
                   <span className="text-xs bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">EN VIVO</span>
                 ) : (
-                  <span className="text-xs text-gray-400 font-mono">
-                    {new Date(match.scheduled_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                  <span className="text-xs text-gray-400 font-mono text-center">
+                    <span className="block">{new Date(match.scheduled_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
+                    <span className="block">{new Date(match.scheduled_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                   </span>
                 )}
                 <span className="text-sm font-semibold text-gray-900 flex-1">{match.away_team}</span>

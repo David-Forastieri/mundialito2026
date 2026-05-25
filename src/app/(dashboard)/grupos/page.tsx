@@ -23,16 +23,24 @@ export default async function GruposPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: memberships } = await serviceClient
-    .from('group_members')
-    .select(`
-      group_id, total_points, role,
-      groups (
-        id, name, description, invite_code, scoring_mode, enable_phases
-      )
-    `)
-    .eq('user_id', user.id)
-    .order('joined_at', { ascending: false })
+  const [{ data: memberships }, { count: pendingInvitations }] = await Promise.all([
+    serviceClient
+      .from('group_members')
+      .select(`
+        group_id, total_points, role,
+        groups (
+          id, name, description, invite_code, scoring_mode, enable_phases
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('joined_at', { ascending: false }),
+    supabase
+      .from('group_invitations')
+      .select('id', { count: 'exact', head: true })
+      .eq('invited_email', user.email!)
+      .eq('status', 'pending')
+      .gt('expires_at', new Date().toISOString()),
+  ])
 
   const groups = ((memberships || []) as unknown as GroupRow[])
     .filter(m => m.groups !== null)
@@ -48,8 +56,17 @@ export default async function GruposPage() {
           + Crear grupo
         </Link>
         <Link href="/grupos/unirse"
-          className="flex-1 bg-white border border-gray-200 rounded-xl p-4 text-center font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+          className={`flex-1 relative rounded-xl p-4 text-center font-semibold transition-colors ${
+            (pendingInvitations ?? 0) > 0
+              ? 'bg-orange-500 text-white hover:bg-orange-600'
+              : 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50'
+          }`}>
           Unirse
+          {(pendingInvitations ?? 0) > 0 && (
+            <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+              {pendingInvitations}
+            </span>
+          )}
         </Link>
       </div>
 

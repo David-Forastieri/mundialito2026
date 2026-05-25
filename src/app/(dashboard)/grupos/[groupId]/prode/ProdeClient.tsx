@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { savePrediction, createTemplate, cloneTemplate } from '@/services/predictions.service'
+import { savePrediction, createTemplate } from '@/services/predictions.service'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { MatchWithPrediction } from '@/types/match.types'
@@ -17,7 +17,7 @@ interface Props {
   scoringMode: ScoringMode
 }
 
-export default function ProdeClient({ groupId, userId, templates, activeTemplateId, matchesWithPredictions, scoringMode }: Props) {
+export default function ProdeClient({ groupId, userId, templates, activeTemplateId, matchesWithPredictions }: Props) {
   const [templateId, setTemplateId] = useState(activeTemplateId)
   const [matches, setMatches] = useState(matchesWithPredictions)
   const [saving, setSaving] = useState<string | null>(null)
@@ -110,15 +110,23 @@ export default function ProdeClient({ groupId, userId, templates, activeTemplate
           <h2 className="font-bold text-gray-700 mb-3 capitalize">{stage === 'group' ? 'Fase de Grupos' : stage}</h2>
           <div className="space-y-3">
             {stageMatches.map((match) => {
-              const locked = match.prediction?.locked || new Date(match.scheduled_at) <= new Date()
+              const now = new Date()
+              const scheduledAt = new Date(match.scheduled_at)
+              const openAt = new Date(scheduledAt.getTime() - 24 * 60 * 60 * 1000)
+              const closeAt = new Date(scheduledAt.getTime() - 30 * 60 * 1000)
+              const tooEarly = now < openAt
+              const locked = match.prediction?.locked || now >= closeAt
+              const canEdit = !tooEarly && !locked
               const hasResult = match.status === 'finished'
+
+              const hoursUntilOpen = Math.ceil((openAt.getTime() - now.getTime()) / (1000 * 60 * 60))
 
               return (
                 <div key={match.id} className={`bg-white border rounded-2xl p-4 ${
-                  locked ? 'border-gray-100' : 'border-orange-200'}`}>
+                  canEdit ? 'border-orange-200' : 'border-gray-100'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-gray-400">
-                      {format(new Date(match.scheduled_at), "dd MMM · HH:mm", { locale: es })}
+                      {format(scheduledAt, "dd MMM · HH:mm", { locale: es })}
                       {match.group_label && ` · Gr. ${match.group_label}`}
                     </span>
                     {hasResult && match.prediction?.points_earned !== undefined && (
@@ -127,7 +135,12 @@ export default function ProdeClient({ groupId, userId, templates, activeTemplate
                         {match.prediction.points_earned} pts
                       </span>
                     )}
-                    {locked && !hasResult && (
+                    {tooEarly && !hasResult && (
+                      <span className="text-xs text-orange-400">
+                        🕐 Abre en {hoursUntilOpen}h
+                      </span>
+                    )}
+                    {locked && !tooEarly && !hasResult && (
                       <span className="text-xs text-gray-400">🔒 Cerrado</span>
                     )}
                   </div>
@@ -135,7 +148,7 @@ export default function ProdeClient({ groupId, userId, templates, activeTemplate
                   <div className="grid grid-cols-3 items-center gap-3">
                     <div className="text-sm font-semibold text-right">{match.home_team}</div>
                     <div className="flex items-center justify-center gap-2">
-                      {locked ? (
+                      {!canEdit ? (
                         <div className="flex items-center gap-2">
                           <div className="w-12 h-10 bg-gray-100 rounded-lg flex items-center justify-center font-bold text-gray-700">
                             {match.prediction?.home_pred ?? '—'}
