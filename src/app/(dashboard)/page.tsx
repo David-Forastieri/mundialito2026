@@ -5,7 +5,7 @@ export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const [{ data: upcomingMatches }, { count: totalGroups }, { data: memberships }] = await Promise.all([
+  const [{ data: upcomingMatches }, { data: memberships, count: totalGroups }] = await Promise.all([
     supabase
       .from('matches')
       .select('id, home_team, away_team, scheduled_at, status, stage')
@@ -14,11 +14,7 @@ export default async function HomePage() {
       .limit(3),
     supabase
       .from('group_members')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', user!.id),
-    supabase
-      .from('group_members')
-      .select('total_points, role, groups(id, name)')
+      .select('total_points, role, groups(id, name)', { count: 'exact' })
       .eq('user_id', user!.id)
       .order('joined_at', { ascending: false })
       .limit(3),
