@@ -2,6 +2,7 @@ import { fetchAllMatches, fetchLiveMatches, fetchTodayMatches } from './client'
 import { WC2026_STAGE_MAP, WC2026_STATUS_MAP } from '@/types/wc2026api.types'
 import type { WC2026Match } from '@/types/wc2026api.types'
 import type { Database } from '@/types/database.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 type MatchInsert = Database['public']['Tables']['matches']['Insert']
 
@@ -25,26 +26,25 @@ export function transformMatch(m: WC2026Match): MatchInsert {
 // ── Sync all matches (full fixture) ──────────────────────────────
 // Called once to seed or refresh the entire fixture
 export async function syncAllMatches(
-  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>
+  supabase: SupabaseClient<Database>
 ) {
   const matches = await fetchAllMatches()
   const rows = matches.map(transformMatch)
 
-  const { error, count } = await supabase
+  const { error } = await supabase
     .from('matches')
     .upsert(rows, {
       onConflict: 'home_team,away_team,scheduled_at',
       ignoreDuplicates: false,
     })
-    .select('id', { count: 'exact', head: true })
 
   if (error) throw error
-  return { synced: count ?? rows.length }
+  return { synced: rows.length }
 }
 
 // ── Sync live matches (called by cron every minute during games) ──
 export async function syncLiveMatches(
-  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>
+  supabase: SupabaseClient<Database>
 ) {
   const liveMatches = await fetchLiveMatches()
 
@@ -70,7 +70,7 @@ export async function syncLiveMatches(
 
 // ── Sync today's matches ──────────────────────────────────────────
 export async function syncTodayMatches(
-  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>
+  supabase: SupabaseClient<Database>
 ) {
   const matches = await fetchTodayMatches()
   const rows = matches.map(transformMatch)
@@ -85,7 +85,7 @@ export async function syncTodayMatches(
 
 // ── Mark finished matches and trigger score calculation ──────────
 export async function syncFinishedMatches(
-  supabase: ReturnType<typeof import('@supabase/supabase-js').createClient>
+  supabase: SupabaseClient<Database>
 ) {
   // Find matches that were 'live' and should now be finished
   // (scheduled_at + 110 min < now)

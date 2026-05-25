@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   const mode = searchParams.get('mode') || 'today'
 
   try {
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
     const result = mode === 'all'
       ? await syncAllMatches(supabase as never)
       : await syncTodayMatches(supabase as never)

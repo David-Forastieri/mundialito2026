@@ -52,23 +52,32 @@ export async function getGroupById(groupId: string): Promise<GroupWithMembers | 
 export async function createGroup(userId: string, dto: CreateGroupDTO): Promise<Group> {
   const supabase = createClient()
   const invite_code = generateInviteCode()
+  const id = crypto.randomUUID()
 
-  const { data: group, error } = await supabase
+  const { error } = await supabase
     .from('groups')
-    .insert({ ...dto, owner_id: userId, invite_code })
-    .select()
-    .single()
-
+    .insert({ id, ...dto, owner_id: userId, invite_code })
   if (error) throw error
 
-  // Auto-join as owner
-  await supabase.from('group_members').insert({
-    group_id: group.id,
+  const { error: memberError } = await supabase.from('group_members').insert({
+    group_id: id,
     user_id: userId,
     role: 'owner',
   })
+  if (memberError) throw memberError
 
-  return group
+  // Return local data — avoids a SELECT that triggers complex RLS evaluation
+  return {
+    id,
+    name: dto.name,
+    description: dto.description ?? null,
+    owner_id: userId,
+    invite_code,
+    scoring_mode: dto.scoring_mode,
+    enable_phases: dto.enable_phases,
+    max_members: dto.max_members ?? 50,
+    created_at: new Date().toISOString(),
+  }
 }
 
 export async function joinGroupByCode(userId: string, inviteCode: string): Promise<Group> {
@@ -106,5 +115,5 @@ export async function joinGroupByCode(userId: string, inviteCode: string): Promi
   })
 
   if (mError) throw mError
-  return group
+  return group as unknown as Group
 }

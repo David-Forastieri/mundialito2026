@@ -1,16 +1,13 @@
 import { getMatchById } from '@/services/fixture.service'
-import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
 
-export default async function MatchPage({ params }: { params: { matchId: string } }) {
-  const match = await getMatchById(params.matchId)
+export default async function MatchPage({ params }: { params: Promise<{ matchId: string }> }) {
+  const { matchId } = await params
+  const match = await getMatchById(matchId)
   if (!match) notFound()
-
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
 
   const isLive = match.status === 'live'
   const isFinished = match.status === 'finished'

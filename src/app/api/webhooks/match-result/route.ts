@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   if (!result.success) return NextResponse.json({ error: result.error.issues }, { status: 400 })
 
   const { matchId, home_score, away_score } = result.data
-  const supabase = await createServiceClient()
+  const supabase = createServiceClient()
 
   // Update match result
   await supabase.from('matches').update({
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
           user_id: template.user_id,
           match_id: matchId,
           points_earned: breakdown.total,
-          breakdown,
+          breakdown: breakdown as unknown as import('@/types/database.types').Json,
         }
       })
     })

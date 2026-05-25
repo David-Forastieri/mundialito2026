@@ -28,15 +28,6 @@ export async function signInWithGoogle() {
   if (error) throw error
 }
 
-export async function signInWithGithub() {
-  const supabase = createClient()
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'github',
-    options: { redirectTo: `${window.location.origin}/auth/callback` },
-  })
-  if (error) throw error
-}
-
 export async function signOut() {
   const supabase = createClient()
   const { error } = await supabase.auth.signOut()
@@ -58,7 +49,7 @@ export async function updateProfile(userId: string, dto: UpdateProfileDTO): Prom
   const supabase = createClient()
   const { data, error } = await supabase
     .from('profiles')
-    .update({ ...dto, updated_at: new Date().toISOString() })
+    .update({ ...dto, updated_at: new Date().toISOString() } as never)
     .eq('id', userId)
     .select()
     .single()

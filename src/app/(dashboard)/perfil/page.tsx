@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { signOut } from '@/services/auth.service'
 import ProfileClient from './ProfileClient'
 
 export default async function PerfilPage() {

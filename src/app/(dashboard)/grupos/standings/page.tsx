@@ -1,10 +1,11 @@
 import { fetchGroupStandings } from '@/lib/wc2026/client'
+import type { WC2026GroupStanding } from '@/types/wc2026api.types'
 import Link from 'next/link'
 
 export const revalidate = 300 // revalidate every 5 minutes
 
 export default async function StandingsPage() {
-  let standings = []
+  let standings: WC2026GroupStanding[] = []
   let error = false
 
   try {

@@ -1,97 +1,107 @@
 import { createClient } from '@/lib/supabase/server'
-import { getGroupById } from '@/services/groups.service'
-import { getGroupRanking } from '@/services/ranking.service'
-import { notFound } from 'next/navigation'
 import Link from 'next/link'
 
-export default async function GroupPage({ params }: { params: { groupId: string } }) {
-  const group = await getGroupById(params.groupId)
-  if (!group) notFound()
-
+export default async function HomePage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const ranking = await getGroupRanking(params.groupId).catch(() => [])
-  const myEntry = ranking.find(r => r.user_id === user!.id)
-
-  const { data: member } = await supabase
-    .from('group_members')
-    .select('template_id')
-    .eq('group_id', params.groupId)
-    .eq('user_id', user!.id)
-    .single()
+  const [{ data: upcomingMatches }, { data: memberships }] = await Promise.all([
+    supabase
+      .from('matches')
+      .select('id, home_team, away_team, scheduled_at, status, stage')
+      .in('status', ['scheduled', 'live'])
+      .order('scheduled_at', { ascending: true })
+      .limit(3),
+    supabase
+      .from('group_members')
+      .select('total_points, role, groups(id, name)')
+      .eq('user_id', user!.id)
+      .order('joined_at', { ascending: false })
+      .limit(3),
+  ])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <Link href="/grupos" className="text-orange-500 text-sm font-medium">← Mis grupos</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">{group.name}</h1>
-        <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-          <span>{group.scoring_mode === 'exact' ? '🎯 Exacto' : '✅ Tendencia'}</span>
-          {group.enable_phases && <span>· Fases activas</span>}
-          <span>· {group.member_count} miembros</span>
-        </div>
+        <h1 className="text-2xl font-black text-gray-900">Mundial 2026</h1>
+        <p className="text-gray-500 text-sm mt-1">¡El prode más grande del mundo!</p>
       </div>
 
-      {myEntry && (
-        <div className="bg-orange-500 rounded-2xl p-5 text-white flex items-center justify-between">
-          <div>
-            <div className="text-sm opacity-80">Tu posición</div>
-            <div className="text-4xl font-black">#{myEntry.rank}</div>
+      <div className="grid grid-cols-2 gap-3">
+        <Link href="/fixture" className="bg-orange-500 rounded-2xl p-5 text-white block">
+          <div className="text-2xl mb-1">📅</div>
+          <div className="font-bold">Ver Fixture</div>
+          <div className="text-xs opacity-80 mt-0.5">Todos los partidos</div>
+        </Link>
+        <Link href="/grupos" className="bg-white border border-gray-200 rounded-2xl p-5 block">
+          <div className="text-2xl mb-1">🏆</div>
+          <div className="font-bold text-gray-900">Mis Grupos</div>
+          <div className="text-xs text-gray-500 mt-0.5">{memberships?.length ?? 0} grupos</div>
+        </Link>
+      </div>
+
+      {(upcomingMatches?.length ?? 0) > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-gray-900">Próximos partidos</h2>
+            <Link href="/fixture" className="text-orange-500 text-sm font-medium">Ver todos →</Link>
           </div>
-          <div className="text-right">
-            <div className="text-sm opacity-80">Puntos</div>
-            <div className="text-4xl font-black">{myEntry.total_points}</div>
+          <div className="space-y-2">
+            {upcomingMatches!.map(match => (
+              <Link key={match.id} href={`/fixture/${match.id}`}
+                className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-3 hover:border-orange-200 transition-colors">
+                <span className="text-sm font-semibold text-gray-900 flex-1 text-right">{match.home_team}</span>
+                {match.status === 'live' ? (
+                  <span className="text-xs bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">EN VIVO</span>
+                ) : (
+                  <span className="text-xs text-gray-400 font-mono">
+                    {new Date(match.scheduled_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}
+                  </span>
+                )}
+                <span className="text-sm font-semibold text-gray-900 flex-1">{match.away_team}</span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
 
-      <div className="flex gap-3">
-        <Link href={`/grupos/${params.groupId}/prode`}
-          className="flex-1 bg-white border-2 border-orange-200 rounded-xl p-4 text-center hover:border-orange-400 transition-colors">
-          <div className="text-2xl mb-1">📝</div>
-          <div className="font-semibold text-gray-900 text-sm">
-            {member?.template_id ? 'Mi plantilla' : 'Cargar predicciones'}
+      {(memberships?.length ?? 0) > 0 ? (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="font-bold text-gray-900">Mis grupos</h2>
+            <Link href="/grupos" className="text-orange-500 text-sm font-medium">Ver todos →</Link>
           </div>
-        </Link>
-        <button onClick={() => navigator.clipboard?.writeText(`Código: ${group.invite_code}`)}
-          className="flex-1 bg-white border border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors">
-          <div className="text-2xl mb-1">🔗</div>
-          <div className="font-semibold text-gray-900 text-sm">Invitar</div>
-          <div className="text-xs text-gray-400 mt-0.5 font-mono">{group.invite_code.slice(0,4)}-{group.invite_code.slice(4)}</div>
-        </button>
-      </div>
-
-      <div>
-        <h2 className="font-bold text-gray-900 mb-3">🏆 Tabla de posiciones</h2>
-        <div className="space-y-2">
-          {ranking.map((entry, i) => (
-            <div key={entry.user_id}
-              className={`flex items-center gap-4 p-4 rounded-xl ${
-                entry.user_id === user!.id ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-gray-100'}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
-                i === 0 ? 'bg-amber-400 text-white' :
-                i === 1 ? 'bg-gray-300 text-white' :
-                i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                {entry.rank}
-              </div>
-              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-600 text-sm">
-                {entry.display_name?.charAt(0).toUpperCase() || '?'}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-900 text-sm">{entry.display_name}</div>
-                <div className="text-xs text-gray-400">{entry.predictions_made} predicciones</div>
-              </div>
-              <div className="font-black text-lg text-gray-900">{entry.total_points}</div>
-            </div>
-          ))}
-          {ranking.length === 0 && (
-            <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
-              Aún no hay puntos. ¡Cargá tus predicciones!
-            </div>
-          )}
+          <div className="space-y-2">
+            {memberships!.map(m => {
+              const group = m.groups as unknown as { id: string; name: string } | null
+              if (!group) return null
+              return (
+                <Link key={group.id} href={`/grupos/${group.id}`}
+                  className="bg-white border border-gray-100 rounded-xl p-4 flex items-center justify-between hover:border-orange-200 transition-colors">
+                  <div>
+                    <div className="font-semibold text-gray-900 text-sm">{group.name}</div>
+                    <div className="text-xs text-gray-400 mt-0.5">{m.role === 'owner' ? 'Organizador' : 'Miembro'}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-black text-lg text-gray-900">{m.total_points ?? 0}</div>
+                    <div className="text-xs text-gray-400">pts</div>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="bg-orange-50 border border-orange-100 rounded-2xl p-6 text-center">
+          <div className="text-3xl mb-2">🏆</div>
+          <h3 className="font-bold text-gray-900 mb-1">¡Creá tu grupo!</h3>
+          <p className="text-sm text-gray-500 mb-4">Invitá amigos y compitan por el prode del Mundial</p>
+          <Link href="/grupos/crear"
+            className="bg-orange-500 text-white px-6 py-2.5 rounded-xl font-semibold text-sm inline-block hover:bg-orange-600 transition-colors">
+            Crear grupo
+          </Link>
+        </div>
+      )}
     </div>
   )
 }

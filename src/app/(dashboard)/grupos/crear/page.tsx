@@ -2,12 +2,11 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createGroup } from '@/services/groups.service'
-import { useAuth } from '@/hooks/useAuth'
+import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
 export default function CrearGrupoPage() {
   const router = useRouter()
-  const { user } = useAuth()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [scoringMode, setScoringMode] = useState<'winner' | 'exact'>('exact')
@@ -15,11 +14,13 @@ export default function CrearGrupoPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!user) return
     setLoading(true); setError(null)
     try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
       const group = await createGroup(user.id, { name, description, scoring_mode: scoringMode, enable_phases: enablePhases })
       router.push(`/grupos/${group.id}`)
     } catch (err) {

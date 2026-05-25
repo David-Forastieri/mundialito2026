@@ -1,97 +1,86 @@
-import { createClient } from '@/lib/supabase/server'
-import { getGroupById } from '@/services/groups.service'
-import { getGroupRanking } from '@/services/ranking.service'
-import { notFound } from 'next/navigation'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import type { ScoringMode } from '@/types/group.types'
 
-export default async function GroupPage({ params }: { params: { groupId: string } }) {
-  const group = await getGroupById(params.groupId)
-  if (!group) notFound()
+interface GroupRow {
+  group_id: string
+  total_points: number | null
+  role: string
+  groups: {
+    id: string
+    name: string
+    description: string | null
+    invite_code: string
+    scoring_mode: ScoringMode
+    enable_phases: boolean
+  } | null
+}
 
+export default async function GruposPage() {
   const supabase = await createClient()
+  const serviceClient = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  const ranking = await getGroupRanking(params.groupId).catch(() => [])
-  const myEntry = ranking.find(r => r.user_id === user!.id)
-
-  const { data: member } = await supabase
+  const { data: memberships } = await serviceClient
     .from('group_members')
-    .select('template_id')
-    .eq('group_id', params.groupId)
-    .eq('user_id', user!.id)
-    .single()
+    .select(`
+      group_id, total_points, role,
+      groups (
+        id, name, description, invite_code, scoring_mode, enable_phases
+      )
+    `)
+    .eq('user_id', user.id)
+    .order('joined_at', { ascending: false })
+
+  const groups = ((memberships || []) as unknown as GroupRow[])
+    .filter(m => m.groups !== null)
+    .map(m => ({ ...m.groups!, my_points: m.total_points ?? 0, role: m.role }))
 
   return (
     <div className="space-y-6">
-      <div>
-        <Link href="/grupos" className="text-orange-500 text-sm font-medium">← Mis grupos</Link>
-        <h1 className="text-2xl font-bold text-gray-900 mt-2">{group.name}</h1>
-        <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
-          <span>{group.scoring_mode === 'exact' ? '🎯 Exacto' : '✅ Tendencia'}</span>
-          {group.enable_phases && <span>· Fases activas</span>}
-          <span>· {group.member_count} miembros</span>
-        </div>
-      </div>
-
-      {myEntry && (
-        <div className="bg-orange-500 rounded-2xl p-5 text-white flex items-center justify-between">
-          <div>
-            <div className="text-sm opacity-80">Tu posición</div>
-            <div className="text-4xl font-black">#{myEntry.rank}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-sm opacity-80">Puntos</div>
-            <div className="text-4xl font-black">{myEntry.total_points}</div>
-          </div>
-        </div>
-      )}
+      <h1 className="text-2xl font-bold text-gray-900">Mis grupos</h1>
 
       <div className="flex gap-3">
-        <Link href={`/grupos/${params.groupId}/prode`}
-          className="flex-1 bg-white border-2 border-orange-200 rounded-xl p-4 text-center hover:border-orange-400 transition-colors">
-          <div className="text-2xl mb-1">📝</div>
-          <div className="font-semibold text-gray-900 text-sm">
-            {member?.template_id ? 'Mi plantilla' : 'Cargar predicciones'}
-          </div>
+        <Link href="/grupos/crear"
+          className="flex-1 bg-orange-500 text-white rounded-xl p-4 text-center font-semibold hover:bg-orange-600 transition-colors">
+          + Crear grupo
         </Link>
-        <button onClick={() => navigator.clipboard?.writeText(`Código: ${group.invite_code}`)}
-          className="flex-1 bg-white border border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors">
-          <div className="text-2xl mb-1">🔗</div>
-          <div className="font-semibold text-gray-900 text-sm">Invitar</div>
-          <div className="text-xs text-gray-400 mt-0.5 font-mono">{group.invite_code.slice(0,4)}-{group.invite_code.slice(4)}</div>
-        </button>
+        <Link href="/grupos/unirse"
+          className="flex-1 bg-white border border-gray-200 rounded-xl p-4 text-center font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
+          Unirse
+        </Link>
       </div>
 
-      <div>
-        <h2 className="font-bold text-gray-900 mb-3">🏆 Tabla de posiciones</h2>
-        <div className="space-y-2">
-          {ranking.map((entry, i) => (
-            <div key={entry.user_id}
-              className={`flex items-center gap-4 p-4 rounded-xl ${
-                entry.user_id === user!.id ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-gray-100'}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
-                i === 0 ? 'bg-amber-400 text-white' :
-                i === 1 ? 'bg-gray-300 text-white' :
-                i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
-                {entry.rank}
-              </div>
-              <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-600 text-sm">
-                {entry.display_name?.charAt(0).toUpperCase() || '?'}
-              </div>
-              <div className="flex-1">
-                <div className="font-semibold text-gray-900 text-sm">{entry.display_name}</div>
-                <div className="text-xs text-gray-400">{entry.predictions_made} predicciones</div>
-              </div>
-              <div className="font-black text-lg text-gray-900">{entry.total_points}</div>
-            </div>
-          ))}
-          {ranking.length === 0 && (
-            <div className="text-center py-8 text-gray-400 bg-white rounded-xl border border-gray-100">
-              Aún no hay puntos. ¡Cargá tus predicciones!
-            </div>
-          )}
+      {groups.length === 0 ? (
+        <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-gray-100">
+          <div className="text-4xl mb-3">🏆</div>
+          <p className="font-medium">Todavía no estás en ningún grupo</p>
+          <p className="text-sm mt-1">Creá uno o usá un código de invitación</p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-3">
+          {groups.map(group => (
+            <Link key={group.id} href={`/grupos/${group.id}`}
+              className="block bg-white border border-gray-100 rounded-xl p-4 hover:border-orange-200 transition-colors">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-semibold text-gray-900">{group.name}</div>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {group.scoring_mode === 'exact' ? '🎯 Exacto' : '✅ Tendencia'}
+                    {group.enable_phases && ' · Fases activas'}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-black text-orange-500">{group.my_points}</div>
+                  <div className="text-xs text-gray-400">pts</div>
+                </div>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

@@ -21,7 +21,7 @@ export function subscribeToGroupRanking(
     }, onUpdate)
     .subscribe()
 
-  return () => supabase.removeChannel(channel)
+  return () => { supabase.removeChannel(channel) }
 }
 
 export function subscribeToMatch(
@@ -39,5 +39,5 @@ export function subscribeToMatch(
     }, onUpdate)
     .subscribe()
 
-  return () => supabase.removeChannel(channel)
+  return () => { supabase.removeChannel(channel) }
 }

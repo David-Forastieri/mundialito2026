@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const supabase = await createServiceClient()
+    const supabase = createServiceClient()
 
     // Check if there are any live matches before hitting the API
     const { data: liveMatches } = await supabase

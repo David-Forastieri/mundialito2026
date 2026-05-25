@@ -24,7 +24,7 @@ export async function getFixture(filters?: {
 
   const { data, error } = await query
   if (error) throw error
-  return data || []
+  return (data || []) as unknown as Match[]
 }
 
 export async function getMatchById(matchId: string): Promise<Match | null> {
@@ -35,7 +35,7 @@ export async function getMatchById(matchId: string): Promise<Match | null> {
     .eq('id', matchId)
     .single()
   if (error) return null
-  return data
+  return data as unknown as Match
 }
 
 export async function getFixtureWithPredictions(

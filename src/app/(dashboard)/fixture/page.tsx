@@ -1,10 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { fetchTodayMatches } from '@/lib/wc2026/client'
 import { getFixture } from '@/services/fixture.service'
 import Link from 'next/link'
 import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import type { MatchStage } from '@/types/match.types'
+import type { Match, MatchStage } from '@/types/match.types'
 
 export const revalidate = 60
 
@@ -14,7 +11,7 @@ const STAGE_LABELS: Record<MatchStage, string> = {
 }
 
 export default async function FixturePage() {
-  const matches = await getFixture().catch(() => [])
+  const matches = await getFixture().catch((): Match[] => [])
 
   const byStage = matches.reduce((acc, m) => {
     if (!acc[m.stage]) acc[m.stage] = []

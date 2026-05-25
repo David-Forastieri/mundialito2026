@@ -1,25 +1,41 @@
-import { createClient } from '@/lib/supabase/server'
-import { getGroupById } from '@/services/groups.service'
-import { getGroupRanking } from '@/services/ranking.service'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import CopyInviteButton from './CopyInviteButton'
+import type { RankingEntry } from '@/types/ranking.types'
 
-export default async function GroupPage({ params }: { params: { groupId: string } }) {
-  const group = await getGroupById(params.groupId)
-  if (!group) notFound()
-
+export default async function GroupPage({ params }: { params: Promise<{ groupId: string }> }) {
+  const { groupId } = await params
   const supabase = await createClient()
+  const serviceClient = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const ranking = await getGroupRanking(params.groupId).catch(() => [])
-  const myEntry = ranking.find(r => r.user_id === user!.id)
+  // Usamos service client para evitar problemas de RLS en la lectura del grupo
+  const { data: group } = await serviceClient
+    .from('groups')
+    .select('id, name, description, invite_code, scoring_mode, enable_phases, owner_id')
+    .eq('id', groupId)
+    .single()
+
+  if (!group) notFound()
+
+  const { count: memberCount } = await serviceClient
+    .from('group_members')
+    .select('id', { count: 'exact', head: true })
+    .eq('group_id', groupId)
 
   const { data: member } = await supabase
     .from('group_members')
     .select('template_id')
-    .eq('group_id', params.groupId)
+    .eq('group_id', groupId)
     .eq('user_id', user!.id)
     .single()
+
+  const { data: rankingData } = await supabase
+    .rpc('get_group_ranking', { p_group_id: groupId })
+
+  const ranking: RankingEntry[] = (rankingData || []) as RankingEntry[]
+  const myEntry = ranking.find(r => r.user_id === user!.id)
 
   return (
     <div className="space-y-6">
@@ -29,7 +45,7 @@ export default async function GroupPage({ params }: { params: { groupId: string 
         <div className="flex items-center gap-3 mt-1 text-sm text-gray-500">
           <span>{group.scoring_mode === 'exact' ? '🎯 Exacto' : '✅ Tendencia'}</span>
           {group.enable_phases && <span>· Fases activas</span>}
-          <span>· {group.member_count} miembros</span>
+          <span>· {memberCount ?? 0} miembros</span>
         </div>
       </div>
 
@@ -47,19 +63,14 @@ export default async function GroupPage({ params }: { params: { groupId: string 
       )}
 
       <div className="flex gap-3">
-        <Link href={`/grupos/${params.groupId}/prode`}
+        <Link href={`/grupos/${groupId}/prode`}
           className="flex-1 bg-white border-2 border-orange-200 rounded-xl p-4 text-center hover:border-orange-400 transition-colors">
           <div className="text-2xl mb-1">📝</div>
           <div className="font-semibold text-gray-900 text-sm">
             {member?.template_id ? 'Mi plantilla' : 'Cargar predicciones'}
           </div>
         </Link>
-        <button onClick={() => navigator.clipboard?.writeText(`Código: ${group.invite_code}`)}
-          className="flex-1 bg-white border border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition-colors">
-          <div className="text-2xl mb-1">🔗</div>
-          <div className="font-semibold text-gray-900 text-sm">Invitar</div>
-          <div className="text-xs text-gray-400 mt-0.5 font-mono">{group.invite_code.slice(0,4)}-{group.invite_code.slice(4)}</div>
-        </button>
+        <CopyInviteButton inviteCode={group.invite_code} />
       </div>
 
       <div>
@@ -68,11 +79,13 @@ export default async function GroupPage({ params }: { params: { groupId: string 
           {ranking.map((entry, i) => (
             <div key={entry.user_id}
               className={`flex items-center gap-4 p-4 rounded-xl ${
-                entry.user_id === user!.id ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-gray-100'}`}>
+                entry.user_id === user!.id ? 'bg-orange-50 border border-orange-200' : 'bg-white border border-gray-100'
+              }`}>
               <div className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-bold ${
                 i === 0 ? 'bg-amber-400 text-white' :
                 i === 1 ? 'bg-gray-300 text-white' :
-                i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600'}`}>
+                i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600'
+              }`}>
                 {entry.rank}
               </div>
               <div className="w-9 h-9 rounded-full bg-orange-100 flex items-center justify-center font-bold text-orange-600 text-sm">
