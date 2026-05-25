@@ -80,7 +80,8 @@ jobs:
 
     steps:
       - name: Log reason
-        run: echo "▶ Corriendo porque: ${{ needs.check.outputs.reason }}"
+        run: |
+          echo "Corriendo porque: ${{ needs.check.outputs.reason }}"
 
       - name: Call sync endpoint
         run: |
