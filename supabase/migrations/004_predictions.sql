@@ -33,11 +33,14 @@ CREATE TABLE IF NOT EXISTS public.advance_predictions (
 );
 
 -- Add FK from group_members to prediction_templates
-ALTER TABLE public.group_members
-  ADD CONSTRAINT fk_group_member_template
-  FOREIGN KEY (template_id)
-  REFERENCES public.prediction_templates(id)
-  ON DELETE SET NULL;
+DO $$ BEGIN
+  ALTER TABLE public.group_members
+    ADD CONSTRAINT fk_group_member_template
+    FOREIGN KEY (template_id)
+    REFERENCES public.prediction_templates(id)
+    ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- Match scores (computed after final whistle)
 CREATE TABLE IF NOT EXISTS public.match_scores (
@@ -65,10 +68,12 @@ ALTER TABLE public.predictions          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.match_scores         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.advance_predictions  ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users manage own templates" ON public.prediction_templates;
 CREATE POLICY "Users manage own templates"
   ON public.prediction_templates FOR ALL
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert predictions before kickoff" ON public.predictions;
 CREATE POLICY "Users can insert predictions before kickoff"
   ON public.predictions FOR INSERT
   WITH CHECK (
@@ -82,6 +87,7 @@ CREATE POLICY "Users can insert predictions before kickoff"
     )
   );
 
+DROP POLICY IF EXISTS "Users can update own unlocked predictions before kickoff" ON public.predictions;
 CREATE POLICY "Users can update own unlocked predictions before kickoff"
   ON public.predictions FOR UPDATE
   USING (
@@ -95,6 +101,7 @@ CREATE POLICY "Users can update own unlocked predictions before kickoff"
     )
   );
 
+DROP POLICY IF EXISTS "Users can view own predictions" ON public.predictions;
 CREATE POLICY "Users can view own predictions"
   ON public.predictions FOR SELECT
   USING (
@@ -104,6 +111,7 @@ CREATE POLICY "Users can view own predictions"
     )
   );
 
+DROP POLICY IF EXISTS "Members can view scores in their groups" ON public.match_scores;
 CREATE POLICY "Members can view scores in their groups"
   ON public.match_scores FOR SELECT
   USING (
@@ -113,6 +121,7 @@ CREATE POLICY "Members can view scores in their groups"
     )
   );
 
+DROP POLICY IF EXISTS "Users manage own advance predictions" ON public.advance_predictions;
 CREATE POLICY "Users manage own advance predictions"
   ON public.advance_predictions FOR ALL
   USING (

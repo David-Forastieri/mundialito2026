@@ -25,6 +25,7 @@ CREATE INDEX IF NOT EXISTS idx_matches_stage     ON public.matches(stage);
 ALTER TABLE public.matches ENABLE ROW LEVEL SECURITY;
 
 -- Matches are publicly readable by all
+DROP POLICY IF EXISTS "Matches are publicly readable" ON public.matches;
 CREATE POLICY "Matches are publicly readable"
   ON public.matches FOR SELECT
   USING (true);

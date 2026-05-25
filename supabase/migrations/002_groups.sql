@@ -29,6 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_group_members_group ON public.group_members(group
 ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.group_members ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Members can view their groups" ON public.groups;
 CREATE POLICY "Members can view their groups"
   ON public.groups FOR SELECT
   USING (EXISTS (
@@ -36,18 +37,22 @@ CREATE POLICY "Members can view their groups"
     WHERE group_id = groups.id AND user_id = auth.uid()
   ));
 
+DROP POLICY IF EXISTS "Authenticated users can create groups" ON public.groups;
 CREATE POLICY "Authenticated users can create groups"
   ON public.groups FOR INSERT
   WITH CHECK (auth.uid() = owner_id);
 
+DROP POLICY IF EXISTS "Owners can update their groups" ON public.groups;
 CREATE POLICY "Owners can update their groups"
   ON public.groups FOR UPDATE
   USING (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "Owners can delete their groups" ON public.groups;
 CREATE POLICY "Owners can delete their groups"
   ON public.groups FOR DELETE
   USING (owner_id = auth.uid());
 
+DROP POLICY IF EXISTS "Members can view group members" ON public.group_members;
 CREATE POLICY "Members can view group members"
   ON public.group_members FOR SELECT
   USING (EXISTS (
@@ -55,10 +60,12 @@ CREATE POLICY "Members can view group members"
     WHERE gm2.group_id = group_members.group_id AND gm2.user_id = auth.uid()
   ));
 
+DROP POLICY IF EXISTS "Users can join groups" ON public.group_members;
 CREATE POLICY "Users can join groups"
   ON public.group_members FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update own membership" ON public.group_members;
 CREATE POLICY "Users can update own membership"
   ON public.group_members FOR UPDATE
   USING (user_id = auth.uid());

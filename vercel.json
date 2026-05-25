@@ -34,11 +34,7 @@
   "crons": [
     {
       "path": "/api/cron/sync-fixture",
-      "schedule": "0 */6 * * *"
-    },
-    {
-      "path": "/api/cron/sync-live",
-      "schedule": "* * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }

@@ -32,10 +32,12 @@ CREATE TRIGGER on_auth_user_created
 -- RLS
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Profiles viewable by authenticated users" ON public.profiles;
 CREATE POLICY "Profiles viewable by authenticated users"
   ON public.profiles FOR SELECT
   USING (auth.role() = 'authenticated');
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
   USING (auth.uid() = id);

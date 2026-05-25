@@ -39,7 +39,7 @@ secret = "env(GOOGLE_CLIENT_SECRET)"
 redirect_uri = ""
 
 [auth.external.github]
-enabled = true
+enabled = false
 client_id = "env(GITHUB_CLIENT_ID)"
 secret = "env(GITHUB_CLIENT_SECRET)"
 redirect_uri = ""
