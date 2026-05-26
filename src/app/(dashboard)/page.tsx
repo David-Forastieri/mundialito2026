@@ -1,8 +1,9 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 
 export default async function HomePage() {
   const supabase = await createClient()
+  const serviceClient = createServiceClient()
   const { data: { user } } = await supabase.auth.getUser()
 
   const [{ data: upcomingMatches }, { data: memberships, count: totalGroups }] = await Promise.all([
@@ -12,7 +13,7 @@ export default async function HomePage() {
       .in('status', ['scheduled', 'live'])
       .order('scheduled_at', { ascending: true })
       .limit(3),
-    supabase
+    serviceClient
       .from('group_members')
       .select('total_points, role, groups(id, name)', { count: 'exact' })
       .eq('user_id', user!.id)
@@ -54,7 +55,7 @@ export default async function HomePage() {
                 {match.status === 'live' ? (
                   <span className="text-xs bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">EN VIVO</span>
                 ) : (
-                  <span className="text-xs text-gray-400 font-mono text-center">
+                  <span className="text-xs text-gray-400 font-mono text-center leading-tight">
                     <span className="block">{new Date(match.scheduled_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
                     <span className="block">{new Date(match.scheduled_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                   </span>
