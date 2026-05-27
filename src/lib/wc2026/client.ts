@@ -24,15 +24,73 @@ const WC_SEASON_ID     = 58210
 const WC_START = new Date('2026-06-11T00:00:00Z')
 const WC_END   = new Date('2026-07-19T00:00:00Z')
 
-// Server-side in-memory cache — reduces burn rate on the 100 req/day limit per key
+// ── Server-side in-memory cache ───────────────────────────────────
+// Reduces burn rate on the 100 req/day limit per key.
+// A cache hit never counts against the daily budget.
 const cache = new Map<string, { data: unknown; expires: number }>()
 
+// ── Dev-only daily call budget ────────────────────────────────────
+const IS_DEV         = process.env.NODE_ENV === 'development'
+const DEV_DAILY_LIMIT = 3   // max real HTTP calls to AllSports per calendar day in dev
+
+// Module-level counter — resets automatically when the date changes or the process restarts
+const devBudget = { date: '', used: 0 }
+
+function todayUTC() {
+  return new Date().toISOString().slice(0, 10) // "YYYY-MM-DD"
+}
+
+/**
+ * Checks and consumes one unit of the dev daily budget.
+ * Throws `DevBudgetError` if the limit is already reached for today.
+ * No-op in production.
+ */
+function consumeDevBudget(path: string): void {
+  if (!IS_DEV) return
+
+  const today = todayUTC()
+  if (devBudget.date !== today) {
+    // New day — reset counter
+    devBudget.date = today
+    devBudget.used = 0
+    console.info(
+      `\x1b[36m[DEV · AllSports]\x1b[0m Nuevo día (${today}) — presupuesto reiniciado: 0/${DEV_DAILY_LIMIT} llamadas.`,
+    )
+  }
+
+  if (devBudget.used >= DEV_DAILY_LIMIT) {
+    console.warn(
+      `\x1b[31m[DEV · AllSports]\x1b[0m ✋ Presupuesto diario agotado (${DEV_DAILY_LIMIT}/${DEV_DAILY_LIMIT}).` +
+      ` Llamada bloqueada → ${path}`,
+    )
+    throw new DevBudgetError()
+  }
+
+  devBudget.used++
+  console.warn(
+    `\x1b[33m[DEV · AllSports]\x1b[0m Llamada ${devBudget.used}/${DEV_DAILY_LIMIT} → ${path}`,
+  )
+}
+
+/** Thrown when the dev daily API budget is exhausted. */
+export class DevBudgetError extends Error {
+  constructor() {
+    super(`[DEV] Presupuesto diario de ${DEV_DAILY_LIMIT} llamadas a AllSports agotado`)
+    this.name = 'DevBudgetError'
+  }
+}
+
+// ── Core fetch ────────────────────────────────────────────────────
+
 async function allSportsFetch<T>(path: string, ttlSeconds = 300): Promise<T> {
+  // Return cached data without touching the budget
   const cached = cache.get(path)
   if (cached && cached.expires > Date.now()) return cached.data as T
 
+  // Will throw DevBudgetError in dev if today's limit is reached
+  consumeDevBudget(path)
+
   // Try each key starting from the active one; rotate on 429.
-  // Capture startIndex before the loop so mutations during iteration don't corrupt keyIndex.
   const startIndex = activeKeyIndex
   for (let attempt = 0; attempt < API_KEYS.length; attempt++) {
     const keyIndex = (startIndex + attempt) % API_KEYS.length
@@ -90,20 +148,23 @@ export interface FetchAllMatchesResult {
   events: AllSportsEvent[]
   /** null = complete; otherwise the date that hit a quota/error so sync can resume from here */
   resumeFrom: Date | null
+  /** Only present in dev when the daily budget was reached mid-sync */
+  devBudgetExhausted?: boolean
 }
 
 /**
  * Full WC fixture — iterates every day from startDate (default June 11) to July 19.
  * Costs 39 API requests for the full range; 300ms delay between calls to respect
  * the 5 req/sec rate limit. Call only for the initial seed sync.
- * On quota (429) errors returns partial results + resumeFrom so the caller can still
- * upsert what was collected and resume the rest later via ?start=.
+ * On quota (429) or dev budget errors, returns partial results + resumeFrom so the
+ * caller can still upsert what was collected and resume the rest later via ?start=.
  */
 export async function fetchAllMatches(startDate?: Date): Promise<FetchAllMatchesResult> {
   const results: AllSportsEvent[] = []
   const seenIds = new Set<number>()
 
   const current = new Date(startDate ?? WC_START)
+
   while (current <= WC_END) {
     try {
       const dayMatches = await fetchMatchesByDate(current)
@@ -114,9 +175,13 @@ export async function fetchAllMatches(startDate?: Date): Promise<FetchAllMatches
         }
       }
     } catch (err) {
+      if (err instanceof DevBudgetError) {
+        // Budget exhausted mid-sync — return what we have so it can still be upserted
+        return { events: results, resumeFrom: new Date(current), devBudgetExhausted: true }
+      }
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('429')) {
-        // Quota exhausted — return what we have + the date to resume from
+        // API quota exhausted — same graceful partial return
         return { events: results, resumeFrom: new Date(current) }
       }
       throw err
@@ -153,6 +218,13 @@ export async function fetchMatchById(eventId: number): Promise<AllSportsEvent | 
 
 /** All 12 group standings for WC 2026 */
 export async function fetchGroupStandings(): Promise<AllSportsStandingGroup[]> {
+  // In dev the budget system already prevents excess calls, but standings
+  // also need live match data to be meaningful — skip entirely in dev.
+  if (IS_DEV) {
+    console.info('\x1b[36m[DEV · AllSports]\x1b[0m fetchGroupStandings bloqueado en desarrollo.')
+    return []
+  }
+
   const json = await allSportsFetch<AllSportsStandingsResponse>(
     `/api/tournament/${WC_TOURNAMENT_ID}/season/${WC_SEASON_ID}/standings/total`,
     600,

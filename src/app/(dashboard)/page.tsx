@@ -1,5 +1,6 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import Link from 'next/link'
+import { formatArgTime } from '@/lib/date'
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -9,7 +10,7 @@ export default async function HomePage() {
   const [{ data: upcomingMatches }, { data: memberships, count: totalGroups }] = await Promise.all([
     supabase
       .from('matches')
-      .select('id, home_team, away_team, scheduled_at, status, stage')
+      .select('id, home_team, away_team, home_team_code, away_team_code, home_team_logo, away_team_logo, scheduled_at, status, stage, group_label')
       .in('status', ['scheduled', 'live'])
       .order('scheduled_at', { ascending: true })
       .limit(3),
@@ -50,17 +51,46 @@ export default async function HomePage() {
           <div className="space-y-2">
             {upcomingMatches!.map(match => (
               <Link key={match.id} href={`/fixture/${match.id}`}
-                className="bg-white border border-gray-100 rounded-xl p-4 flex items-center gap-3 hover:border-orange-200 transition-colors">
-                <span className="text-sm font-semibold text-gray-900 flex-1 text-right">{match.home_team}</span>
-                {match.status === 'live' ? (
-                  <span className="text-xs bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">EN VIVO</span>
-                ) : (
-                  <span className="text-xs text-gray-400 font-mono text-center leading-tight">
-                    <span className="block">{new Date(match.scheduled_at).toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })}</span>
-                    <span className="block">{new Date(match.scheduled_at).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                className="bg-white border border-gray-100 rounded-xl p-3 flex items-center gap-2 hover:border-orange-200 transition-colors group">
+
+                {/* Local */}
+                <div className="flex items-center justify-end gap-2 flex-1 min-w-0">
+                  <span className="text-sm font-semibold text-gray-900 truncate text-right leading-tight">
+                    {match.home_team}
                   </span>
-                )}
-                <span className="text-sm font-semibold text-gray-900 flex-1">{match.away_team}</span>
+                  {match.home_team_logo
+                    ? <img src={match.home_team_logo} alt={match.home_team_code ?? ''} className="w-7 h-7 object-contain shrink-0" />
+                    : <span className="text-xl shrink-0">🏳️</span>
+                  }
+                </div>
+
+                {/* Centro: hora / en vivo */}
+                <div className="shrink-0 text-center w-20">
+                  {match.status === 'live' ? (
+                    <span className="inline-flex items-center gap-1 text-xs bg-red-500 text-white font-bold px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                      EN VIVO
+                    </span>
+                  ) : (
+                    <div className="text-xs text-gray-400 leading-tight">
+                      <div className="font-semibold text-gray-600">{formatArgTime(match.scheduled_at, 'HH:mm')}</div>
+                      <div>{formatArgTime(match.scheduled_at, 'dd MMM')}</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Visitante */}
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {match.away_team_logo
+                    ? <img src={match.away_team_logo} alt={match.away_team_code ?? ''} className="w-7 h-7 object-contain shrink-0" />
+                    : <span className="text-xl shrink-0">🏳️</span>
+                  }
+                  <span className="text-sm font-semibold text-gray-900 truncate leading-tight">
+                    {match.away_team}
+                  </span>
+                </div>
+
+                <span className="text-gray-300 group-hover:text-gray-500 transition-colors shrink-0 text-sm">›</span>
               </Link>
             ))}
           </div>

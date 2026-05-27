@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { syncAllMatches, syncTodayMatches } from '@/lib/wc2026/sync'
 
+const IS_DEV = process.env.NODE_ENV === 'development'
+
 // POST /api/fixture/sync
 // Manually sync fixture from WC2026 API
 // Use ?mode=all for full sync, ?mode=today for today only (default)
@@ -16,8 +18,17 @@ export async function POST(request: Request) {
   }
 
   const { searchParams } = new URL(request.url)
-  const mode      = searchParams.get('mode') || 'today'
+  const mode       = searchParams.get('mode') || 'today'
   const startParam = searchParams.get('start')  // e.g. ?start=2026-07-05 to resume
+
+  if (IS_DEV) {
+    console.warn(
+      '\x1b[33m[DEV · Sync]\x1b[0m',
+      mode === 'all'
+        ? 'Modo "all" limitado a 3 días en desarrollo (producción: 39 días / ~39 req).'
+        : 'Modo "today" — 1 llamada a la API.',
+    )
+  }
 
   try {
     const supabase  = createServiceClient()
@@ -26,7 +37,17 @@ export async function POST(request: Request) {
       ? await syncAllMatches(supabase as never, startDate)
       : await syncTodayMatches(supabase as never)
 
-    return NextResponse.json({ ok: true, mode, ...result })
+    const devInfo = IS_DEV
+      ? {
+          dev_mode: true,
+          dev_budget: '3 llamadas reales a la API por día en desarrollo',
+          ...('devBudgetExhausted' in result && result.devBudgetExhausted
+            ? { dev_warning: 'Presupuesto diario agotado — sync detenido. Reiniciará mañana o al reiniciar el servidor.' }
+            : {}),
+        }
+      : {}
+
+    return NextResponse.json({ ok: true, mode, ...devInfo, ...result })
   } catch (error) {
     console.error('Fixture sync error:', error)
     return NextResponse.json(

@@ -12,8 +12,9 @@ export default async function StandingsPage() {
 
   try {
     groups = await fetchGroupStandings()
-  } catch {
+  } catch (err) {
     error = true
+    console.error('[standings] fetchGroupStandings failed:', err)
   }
 
   return (
@@ -34,7 +35,13 @@ export default async function StandingsPage() {
       {groups.length === 0 && !error && (
         <div className="text-center py-12 text-gray-400">
           <div className="text-5xl mb-3">📊</div>
-          <p>La fase de grupos aún no comenzó</p>
+          {process.env.NODE_ENV === 'development' ? (
+            <p className="text-sm">Tabla deshabilitada en desarrollo<br/>
+              <span className="text-xs opacity-70">(se activa en producción para no gastar cuota de API)</span>
+            </p>
+          ) : (
+            <p>La fase de grupos aún no comenzó</p>
+          )}
         </div>
       )}
 

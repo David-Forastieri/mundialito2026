@@ -1,8 +1,7 @@
 import { getFixture } from '@/services/fixture.service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { formatArgTime } from '@/lib/date'
 import type { Match } from '@/types/match.types'
 
 export const revalidate = 60
@@ -70,7 +69,7 @@ export default async function GroupFixturePage({
             <div className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-0.5">
               Fase de Grupos
             </div>
-            <div className="text-5xl font-black leading-none">Grupo {groupLabel}</div>
+            <div className="text-2xl sm:text-3xl font-black leading-none">Grupo {groupLabel}</div>
           </div>
           <div className="text-right">
             <div className="text-white/80 text-sm font-semibold">{finished}/{matches.length}</div>
@@ -144,10 +143,10 @@ export default async function GroupFixturePage({
                   ) : (
                     <div>
                       <div className="font-bold text-gray-800 text-sm">
-                        {format(new Date(match.scheduled_at), 'HH:mm')}
+                        {formatArgTime(match.scheduled_at, 'HH:mm')}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {format(new Date(match.scheduled_at), "dd 'de' MMM", { locale: es })}
+                        {formatArgTime(match.scheduled_at, "dd 'de' MMM")}
                       </div>
                     </div>
                   )}

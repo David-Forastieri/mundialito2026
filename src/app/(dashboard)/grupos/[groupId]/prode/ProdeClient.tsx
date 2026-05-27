@@ -2,8 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction, createTemplate } from '@/services/predictions.service'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { formatArgTime } from '@/lib/date'
 import type { MatchWithPrediction } from '@/types/match.types'
 import type { PredictionTemplate } from '@/types/prediction.types'
 import type { ScoringMode } from '@/types/group.types'
@@ -126,7 +125,7 @@ export default function ProdeClient({ groupId, userId, templates, activeTemplate
                   canEdit ? 'border-orange-200' : 'border-gray-100'}`}>
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs text-gray-400">
-                      {format(scheduledAt, "dd MMM · HH:mm", { locale: es })}
+                      {formatArgTime(scheduledAt, "dd MMM · HH:mm")}
                       {match.group_label && ` · Gr. ${match.group_label}`}
                     </span>
                     {hasResult && match.prediction?.points_earned !== undefined && (

@@ -1,7 +1,6 @@
 import { getMatchById } from '@/services/fixture.service'
 import { notFound } from 'next/navigation'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { formatArgTime } from '@/lib/date'
 import Link from 'next/link'
 import type { MatchStage } from '@/types/match.types'
 
@@ -94,10 +93,10 @@ export default async function MatchPage({
             ) : (
               <div className="text-gray-400">
                 <div className="text-xl font-semibold">
-                  {format(new Date(match.scheduled_at), 'HH:mm')}
+                  {formatArgTime(match.scheduled_at, 'HH:mm')}
                 </div>
                 <div className="text-xs">
-                  {format(new Date(match.scheduled_at), "dd 'de' MMM", { locale: es })}
+                  {formatArgTime(match.scheduled_at, "dd 'de' MMM")}
                 </div>
               </div>
             )}

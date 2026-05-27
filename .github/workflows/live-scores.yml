@@ -55,20 +55,21 @@ jobs:
             exit 0
           fi
 
-          # Durante el Mundial, solo correr entre 12:00 y 02:00 UTC (horario de partidos)
+          # Durante el Mundial, solo correr entre 15:00 y 05:00 UTC (horario de partidos)
+          # Primer partido: ~13:00 ARG = 16:00 UTC — arrancamos a las 15:00 UTC (1h de margen)
+          # Ultimo partido: ~23:00 ARG = 02:00 UTC; con tiempo extra + penales termina ~04:25 UTC
           CURRENT_MINS=$((NOW_HOUR * 60 + NOW_MIN))
-          MATCH_START_MINS=$((12 * 60))   # 12:00 UTC
-          DAY_END_MINS=$((24 * 60))       # 24:00 UTC
+          MATCH_START_MINS=$((15 * 60))   # 15:00 UTC = 12:00 ARG
 
           IN_EVENING=$( [ $CURRENT_MINS -ge $MATCH_START_MINS ] && echo "true" || echo "false" )
-          IN_EARLY=$( [ $NOW_HOUR -lt 2 ] && echo "true" || echo "false" )
+          IN_EARLY=$( [ $NOW_HOUR -lt 5 ] && echo "true" || echo "false" )
 
           if [ "$IN_EVENING" = "true" ] || [ "$IN_EARLY" = "true" ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
             echo "reason=Horario de partidos (${NOW_HOUR}:${NOW_MIN} UTC)" >> $GITHUB_OUTPUT
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "reason=Sin partidos a las ${NOW_HOUR}:${NOW_MIN} UTC (ventana: 12:00-02:00 UTC)" >> $GITHUB_OUTPUT
+            echo "reason=Sin partidos a las ${NOW_HOUR}:${NOW_MIN} UTC (ventana: 15:00-05:00 UTC)" >> $GITHUB_OUTPUT
           fi
 
   # ── Sync live scores ─────────────────────────────────────────────

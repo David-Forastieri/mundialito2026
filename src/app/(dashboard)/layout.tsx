@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { DesktopNav, MobileNav } from '@/components/Nav'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -15,11 +16,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <span className="text-xl">⚽</span>
             <span className="text-orange-500">Mundial</span> 2026
           </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/fixture" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Fixture</Link>
-            <Link href="/grupos" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Mis Grupos</Link>
-            <Link href="/perfil" className="text-gray-600 hover:text-gray-900 font-medium transition-colors">Perfil</Link>
-          </nav>
+
+          {/* Desktop nav — detecta sección activa con usePathname */}
+          <DesktopNav />
         </div>
       </header>
 
@@ -27,21 +26,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {children}
       </main>
 
-      {/* Mobile nav */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 flex safe-bottom">
-        {[
-          { href: '/', icon: '🏠', label: 'Inicio' },
-          { href: '/fixture', icon: '📅', label: 'Fixture' },
-          { href: '/grupos', icon: '🏆', label: 'Grupos' },
-          { href: '/perfil', icon: '👤', label: 'Perfil' },
-        ].map((item) => (
-          <Link key={item.href} href={item.href}
-            className="flex-1 flex flex-col items-center gap-1 py-3 text-gray-500 hover:text-orange-500 transition-colors">
-            <span className="text-xl">{item.icon}</span>
-            <span className="text-xs font-medium">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+      {/* Mobile / PWA nav — detecta sección activa con usePathname */}
+      <MobileNav />
 
       <div className="md:hidden h-20" />
     </div>

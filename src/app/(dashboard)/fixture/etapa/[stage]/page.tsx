@@ -1,8 +1,7 @@
 import { getFixture } from '@/services/fixture.service'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { formatArgTime } from '@/lib/date'
 import type { Match, MatchStage } from '@/types/match.types'
 
 export const revalidate = 60
@@ -118,10 +117,10 @@ export default async function StagePage({
                   ) : (
                     <div>
                       <div className="font-bold text-gray-800 text-sm">
-                        {format(new Date(match.scheduled_at), 'HH:mm')}
+                        {formatArgTime(match.scheduled_at, 'HH:mm')}
                       </div>
                       <div className="text-xs text-gray-400">
-                        {format(new Date(match.scheduled_at), "dd 'de' MMM", { locale: es })}
+                        {formatArgTime(match.scheduled_at, "dd 'de' MMM")}
                       </div>
                     </div>
                   )}
