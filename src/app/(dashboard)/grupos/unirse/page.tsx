@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import UnirseClient from './UnirseClient'
@@ -13,7 +13,10 @@ export default async function UnirsePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: invitationsRaw } = await supabase
+  // Use service client so the JOIN to groups works even before the user is a member.
+  // The invited_email filter ensures users only see their own invitations.
+  const service = createServiceClient()
+  const { data: invitationsRaw } = await service
     .from('group_invitations')
     .select(`
       id, status, created_at,

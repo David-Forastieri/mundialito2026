@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 
 export async function GET() {
@@ -6,7 +6,10 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const { data: invitations } = await supabase
+  // Use service client so the JOIN to groups works even before the user is a member.
+  // The invited_email filter ensures users only see their own invitations.
+  const service = createServiceClient()
+  const { data: invitations } = await service
     .from('group_invitations')
     .select(`
       id, status, created_at, expires_at,
@@ -32,7 +35,7 @@ export async function PATCH(req: Request) {
 
   const { data: invitation } = await supabase
     .from('group_invitations')
-    .select('group_id, groups(invite_code)')
+    .select('group_id')
     .eq('id', id)
     .eq('invited_email', user.email!)
     .eq('status', 'pending')
@@ -41,8 +44,7 @@ export async function PATCH(req: Request) {
   if (!invitation) return NextResponse.json({ error: 'Invitación no encontrada' }, { status: 404 })
 
   if (status === 'accepted') {
-    const group = invitation.groups as unknown as { invite_code: string } | null
-    if (!group) return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 })
+    if (!invitation.group_id) return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 })
 
     // Check not already a member
     const { data: existing } = await supabase

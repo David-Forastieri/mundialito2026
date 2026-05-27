@@ -50,13 +50,14 @@ export async function POST(req: Request) {
 
   // Send email via Resend if configured
   const resendKey = process.env.RESEND_API_KEY
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mundialito2026.vercel.app'
+  const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mundialito2026-eight.vercel.app'
+  const siteUrl = rawSiteUrl.startsWith('http://localhost') ? 'https://mundialito2026-eight.vercel.app' : rawSiteUrl
   const inviteCode = group.invite_code
   const formattedCode = `${inviteCode.slice(0, 4)}-${inviteCode.slice(4)}`
 
   if (resendKey) {
     const emailBody = {
-      from: 'Mundial 2026 Prode <noreply@mundialito2026.com>',
+      from: 'Mundial 2026 Prode <onboarding@resend.dev>',
       to: [invited_email],
       subject: `Te invitaron al grupo "${group.name}" en Mundial 2026 Prode`,
       html: `
