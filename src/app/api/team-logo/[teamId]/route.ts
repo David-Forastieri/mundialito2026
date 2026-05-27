@@ -30,37 +30,50 @@ export async function GET(
     })
   }
 
-  // Try each key in order; rotate on 429
-  for (const key of API_KEYS) {
-    const upstream = await fetch(
-      `https://${API_HOST}/api/team/${teamId}/image`,
-      {
-        headers: {
-          'X-RapidAPI-Key':  key,
-          'X-RapidAPI-Host': API_HOST,
+  // Try all keys; on 429 (rate-limit) retry once after a short delay
+  const tryKeys = async (): Promise<Response | null> => {
+    for (const key of API_KEYS) {
+      const res = await fetch(
+        `https://${API_HOST}/api/team/${teamId}/image`,
+        {
+          headers: {
+            'X-RapidAPI-Key':  key,
+            'X-RapidAPI-Host': API_HOST,
+          },
         },
-        next: { revalidate: 86400 },
-      },
-    )
+      )
+      if (res.status === 429) continue   // try next key
+      if (!res.ok)            return null // 404 or other error — no point retrying
+      return res
+    }
+    return null // all keys returned 429
+  }
 
-    if (upstream.status === 429) continue
+  let upstream = await tryKeys()
 
-    if (!upstream.ok) break
+  // All keys rate-limited (per-second burst) — wait 400ms and try once more
+  if (!upstream) {
+    await new Promise(r => setTimeout(r, 400))
+    upstream = await tryKeys()
+  }
 
+  if (upstream) {
     const image = await upstream.arrayBuffer()
     return new NextResponse(image, {
       headers: {
         'Content-Type':  upstream.headers.get('Content-Type') ?? 'image/png',
+        // Long CDN cache — logo never changes once a team is in the tournament
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
       },
     })
   }
 
-  // All keys exhausted or image not found — return inline SVG fallback
+  // Quota exhausted or not found — SVG placeholder.
+  // no-store: CDN won't cache this failure so the next request retries the API.
   return new NextResponse(FALLBACK_SVG, {
     headers: {
       'Content-Type':  'image/svg+xml',
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': 'no-store',
     },
   })
 }
