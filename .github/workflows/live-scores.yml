@@ -90,9 +90,21 @@ jobs:
 
           echo "→ Syncing mode=$MODE"
 
+          # mode=live → /api/cron/sync-live (scores en vivo + marcar finalizados)
+          # mode=today|all → /api/fixture/sync (fixture completo o del día)
+          if [ "$MODE" = "live" ]; then
+            ENDPOINT="${BASE_URL}/api/cron/sync-live"
+            AUTH_HEADER="Bearer ${{ secrets.CRON_SECRET }}"
+            HTTP_METHOD="GET"
+          else
+            ENDPOINT="${BASE_URL}/api/fixture/sync?mode=${MODE}"
+            AUTH_HEADER="Bearer ${{ secrets.WEBHOOK_SECRET }}"
+            HTTP_METHOD="POST"
+          fi
+
           HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
-            -X POST "${BASE_URL}/api/fixture/sync?mode=${MODE}" \
-            -H "Authorization: Bearer ${{ secrets.WEBHOOK_SECRET }}" \
+            -X $HTTP_METHOD "$ENDPOINT" \
+            -H "Authorization: $AUTH_HEADER" \
             -H "Content-Type: application/json" \
             --max-time 30 \
             --retry 2 \

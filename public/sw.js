@@ -7,6 +7,11 @@ const STATIC_ASSETS = [
   '/fixture',
   '/grupos',
   '/manifest.json',
+  // Rutas de fixture por grupo y etapa (precacheadas para PWA offline)
+  '/fixture/grupo/A', '/fixture/grupo/B', '/fixture/grupo/C',
+  '/fixture/grupo/D', '/fixture/grupo/E', '/fixture/grupo/F',
+  '/fixture/grupo/G', '/fixture/grupo/H', '/fixture/grupo/I',
+  '/fixture/grupo/J', '/fixture/grupo/K', '/fixture/grupo/L',
 ]
 
 self.addEventListener('install', (event) => {

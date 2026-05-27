@@ -282,14 +282,17 @@ export type Database = {
       }
       matches: {
         Row: {
+          allsports_event_id: number | null
           away_score: number | null
           away_team: string
           away_team_code: string
+          away_team_logo: string | null
           created_at: string
           group_label: string | null
           home_score: number | null
           home_team: string
           home_team_code: string
+          home_team_logo: string | null
           id: string
           scheduled_at: string
           stage: string
@@ -298,14 +301,17 @@ export type Database = {
           venue: string | null
         }
         Insert: {
+          allsports_event_id?: number | null
           away_score?: number | null
           away_team: string
           away_team_code?: string
+          away_team_logo?: string | null
           created_at?: string
           group_label?: string | null
           home_score?: number | null
           home_team: string
           home_team_code?: string
+          home_team_logo?: string | null
           id?: string
           scheduled_at: string
           stage?: string
@@ -314,14 +320,17 @@ export type Database = {
           venue?: string | null
         }
         Update: {
+          allsports_event_id?: number | null
           away_score?: number | null
           away_team?: string
           away_team_code?: string
+          away_team_logo?: string | null
           created_at?: string
           group_label?: string | null
           home_score?: number | null
           home_team?: string
           home_team_code?: string
+          home_team_logo?: string | null
           id?: string
           scheduled_at?: string
           stage?: string

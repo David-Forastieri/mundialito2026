@@ -11,17 +11,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!process.env.WC2026_API_KEY) {
-    return NextResponse.json({ error: 'WC2026_API_KEY not configured' }, { status: 500 })
+  if (!process.env.ALLSPORTS_API_KEY) {
+    return NextResponse.json({ error: 'ALLSPORTS_API_KEY not configured' }, { status: 500 })
   }
 
   const { searchParams } = new URL(request.url)
-  const mode = searchParams.get('mode') || 'today'
+  const mode      = searchParams.get('mode') || 'today'
+  const startParam = searchParams.get('start')  // e.g. ?start=2026-07-05 to resume
 
   try {
-    const supabase = createServiceClient()
+    const supabase  = createServiceClient()
+    const startDate = startParam ? new Date(startParam) : undefined
     const result = mode === 'all'
-      ? await syncAllMatches(supabase as never)
+      ? await syncAllMatches(supabase as never, startDate)
       : await syncTodayMatches(supabase as never)
 
     return NextResponse.json({ ok: true, mode, ...result })
@@ -36,9 +38,16 @@ export async function POST(request: Request) {
 
 // GET /api/fixture/sync — health check
 export async function GET() {
-  const hasKey = !!process.env.WC2026_API_KEY
+  const keysConfigured = [
+    process.env.ALLSPORTS_API_KEY,
+    process.env.ALLSPORTS_API_KEY_2,
+  ].filter(Boolean).length
+
   return NextResponse.json({
-    configured: hasKey,
-    message: hasKey ? 'WC2026 API key found' : 'WC2026_API_KEY not set in environment',
+    configured: keysConfigured > 0,
+    keys: keysConfigured,
+    message: keysConfigured > 0
+      ? `${keysConfigured} AllSports API key(s) configured`
+      : 'ALLSPORTS_API_KEY not set in environment',
   })
 }

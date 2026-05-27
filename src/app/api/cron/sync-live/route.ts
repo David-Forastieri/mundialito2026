@@ -13,8 +13,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  if (!process.env.WC2026_API_KEY) {
-    return NextResponse.json({ error: 'WC2026_API_KEY not configured' }, { status: 500 })
+  if (!process.env.ALLSPORTS_API_KEY) {
+    return NextResponse.json({ error: 'ALLSPORTS_API_KEY not configured' }, { status: 500 })
   }
 
   try {

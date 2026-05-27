@@ -1,4 +1,4 @@
-export type MatchStage = 'group' | 'r16' | 'qf' | 'sf' | 'final' | 'third'
+export type MatchStage = 'group' | 'r32' | 'r16' | 'qf' | 'sf' | 'final' | 'third'
 export type MatchStatus = 'scheduled' | 'live' | 'finished' | 'postponed'
 export type Tendency = 'H' | 'D' | 'A'
 
@@ -8,6 +8,9 @@ export interface Match {
   away_team: string
   home_team_code: string
   away_team_code: string
+  home_team_logo: string | null
+  away_team_logo: string | null
+  allsports_event_id: number | null
   scheduled_at: string
   stage: MatchStage
   status: MatchStatus
@@ -30,9 +33,10 @@ export interface MatchWithPrediction extends Match {
 
 export const STAGE_LABELS: Record<MatchStage, string> = {
   group: 'Fase de Grupos',
-  r16: 'Octavos de Final',
-  qf: 'Cuartos de Final',
-  sf: 'Semifinal',
+  r32:   'Ronda de 32',
+  r16:   'Octavos de Final',
+  qf:    'Cuartos de Final',
+  sf:    'Semifinal',
   third: 'Tercer Puesto',
   final: 'Final',
 }

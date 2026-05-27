@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const results: Record<string, unknown> = {}
 
     // 1. Sync today's matches from WC2026 API (if key is configured)
-    if (process.env.WC2026_API_KEY) {
+    if (process.env.ALLSPORTS_API_KEY) {
       const sync = await syncTodayMatches(supabase as never)
       results.fixture_sync = sync
 

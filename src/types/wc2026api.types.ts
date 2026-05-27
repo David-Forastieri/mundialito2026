@@ -1,76 +1,112 @@
-// ── WC2026 API Response Types ─────────────────────────────────────
-// Docs: https://wc2026api.com/docs
+// AllSportsAPI v2 — Response Types
+// Via RapidAPI: allsportsapi2.p.rapidapi.com
+// WC 2026: tournament_id=16, season_id=58210
 
-export interface WC2026Match {
+export interface AllSportsEvent {
   id: number
-  home_team: WC2026Team
-  away_team: WC2026Team
-  home_score: number | null
-  away_score: number | null
-  date: string           // ISO UTC e.g. "2026-06-11T23:00:00Z"
-  stage: string          // "Group Stage", "Round of 16", "Quarter-finals", etc.
-  group: string | null   // "A", "B", ... null for knockouts
-  venue: WC2026Venue
-  status: string         // "scheduled", "live", "finished", "postponed"
-  minute: number | null  // live match minute
-}
-
-export interface WC2026Team {
-  id: number
-  name: string
-  code: string           // "ARG", "BRA", etc.
-  flag: string           // URL to flag image
-}
-
-export interface WC2026Venue {
-  id: number
-  name: string
-  city: string
-  country: string
-  capacity: number
-}
-
-export interface WC2026GroupStanding {
-  group: string
-  standings: WC2026StandingEntry[]
-}
-
-export interface WC2026StandingEntry {
-  position: number
-  team: WC2026Team
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  goals_for: number
-  goals_against: number
-  goal_difference: number
-  points: number
-}
-
-export interface WC2026ApiResponse<T> {
-  data: T
-  meta?: {
-    total: number
-    page: number
-    per_page: number
+  homeTeam: { id: number; name: string }
+  awayTeam: { id: number; name: string }
+  startTimestamp: number                  // Unix seconds → new Date(ts * 1000)
+  status: {
+    type: string                          // "notstarted" | "inprogress" | "finished" | "postponed" | "canceled"
+    code: number
+    description: string
   }
+  homeScore: { current?: number }
+  awayScore: { current?: number }
+  tournament: { id: number; name: string } // "FIFA World Cup, Group A" | "FIFA World Cup, Knockout"
+  roundInfo: { round: number; name?: string; cupRoundType?: number }
+  venue?: { name?: string; city?: { name?: string } }
 }
 
-// ── Stage mapping: WC2026 API → internal DB ───────────────────────
-export const WC2026_STAGE_MAP: Record<string, string> = {
-  'Group Stage':      'group',
-  'Round of 16':      'r16',
-  'Quarter-finals':   'qf',
-  'Semi-finals':      'sf',
-  'Third Place':      'third',
-  'Final':            'final',
+export interface AllSportsMatchResponse {
+  event: AllSportsEvent
 }
 
-export const WC2026_STATUS_MAP: Record<string, string> = {
-  'scheduled':  'scheduled',
-  'live':       'live',
-  'finished':   'finished',
-  'postponed':  'postponed',
-  'cancelled':  'postponed',
+export interface AllSportsMatchesResponse {
+  events: AllSportsEvent[]
+}
+
+export interface AllSportsStandingRow {
+  position: number
+  team: { id: number; name: string }
+  points: number
+  wins: number
+  draws: number
+  losses: number
+  scoresFor: number
+  scoresAgainst: number
+  scoreDiffFormatted: string
+  matches: number
+}
+
+export interface AllSportsStandingGroup {
+  name: string          // "Group A", "Group B", ...
+  rows: AllSportsStandingRow[]
+}
+
+export interface AllSportsStandingsResponse {
+  standings: AllSportsStandingGroup[]
+}
+
+// AllSports status.type → internal status
+export const STATUS_MAP: Record<string, string> = {
+  notstarted:  'scheduled',
+  inprogress:  'live',
+  finished:    'finished',
+  postponed:   'postponed',
+  canceled:    'postponed',
+  cancelled:   'postponed',
+}
+
+// roundInfo.name → internal stage (knockout only)
+export const ROUND_NAME_STAGE_MAP: Record<string, string> = {
+  'Round of 32':   'r32',
+  'Round of 16':   'r16',
+  'Quarterfinals': 'qf',
+  'Quarter-finals':'qf',
+  'Semifinals':    'sf',
+  'Semi-finals':   'sf',
+  '3rd Place':     'third',
+  'Third place':   'third',
+  'Final':         'final',
+}
+
+// Team name (AllSports English) → FIFA 3-letter code
+export const TEAM_CODE_MAP: Record<string, string> = {
+  // CONMEBOL
+  'Argentina': 'ARG', 'Brazil': 'BRA', 'Colombia': 'COL',
+  'Uruguay': 'URU', 'Ecuador': 'ECU', 'Venezuela': 'VEN',
+  'Paraguay': 'PAR', 'Bolivia': 'BOL', 'Chile': 'CHI', 'Peru': 'PER',
+  // CONCACAF
+  'United States': 'USA', 'USA': 'USA', 'Mexico': 'MEX', 'Canada': 'CAN',
+  'Panama': 'PAN', 'Costa Rica': 'CRC', 'Honduras': 'HON',
+  'Jamaica': 'JAM', 'Guatemala': 'GUA', 'Cuba': 'CUB',
+  'El Salvador': 'SLV', 'Trinidad and Tobago': 'TTO', 'Trinidad & Tobago': 'TTO',
+  // UEFA
+  'Germany': 'GER', 'Spain': 'ESP', 'France': 'FRA', 'England': 'ENG',
+  'Portugal': 'POR', 'Netherlands': 'NED', 'Belgium': 'BEL', 'Italy': 'ITA',
+  'Poland': 'POL', 'Austria': 'AUT', 'Switzerland': 'SUI', 'Croatia': 'CRO',
+  'Serbia': 'SRB', 'Slovakia': 'SVK', 'Czech Republic': 'CZE', 'Czechia': 'CZE',
+  'Hungary': 'HUN', 'Denmark': 'DEN', 'Turkey': 'TUR', 'Romania': 'ROU',
+  'Ukraine': 'UKR', 'Georgia': 'GEO', 'Albania': 'ALB', 'Norway': 'NOR',
+  'Sweden': 'SWE', 'Wales': 'WAL', 'Scotland': 'SCO', 'Greece': 'GRE',
+  'Iceland': 'ISL', 'Finland': 'FIN',
+  'Bosnia & Herzegovina': 'BIH', 'Bosnia and Herzegovina': 'BIH',
+  'North Macedonia': 'MKD', 'Montenegro': 'MNE', 'Kosovo': 'KOS',
+  // AFC
+  'Japan': 'JPN', 'South Korea': 'KOR', 'Korea Republic': 'KOR',
+  'Australia': 'AUS', 'Iran': 'IRN', 'Saudi Arabia': 'KSA',
+  'Qatar': 'QAT', 'Iraq': 'IRQ', 'United Arab Emirates': 'UAE', 'UAE': 'UAE',
+  'Jordan': 'JOR', 'Uzbekistan': 'UZB', 'Kyrgyzstan': 'KGZ',
+  'Bahrain': 'BHR', 'Oman': 'OMA', 'China': 'CHN', 'Indonesia': 'IDN',
+  // CAF
+  'Morocco': 'MAR', 'Senegal': 'SEN', 'Cameroon': 'CMR', 'Egypt': 'EGY',
+  "Cote d'Ivoire": 'CIV', 'Ivory Coast': 'CIV', 'Algeria': 'ALG',
+  'Nigeria': 'NGA', 'Tunisia': 'TUN', 'DR Congo': 'COD', 'Congo DR': 'COD',
+  'Mali': 'MLI', 'South Africa': 'RSA', 'Burkina Faso': 'BFA',
+  'Ghana': 'GHA', 'Cape Verde': 'CPV', 'Tanzania': 'TAN', 'Benin': 'BEN',
+  'Zambia': 'ZAM',
+  // OFC
+  'New Zealand': 'NZL',
 }
