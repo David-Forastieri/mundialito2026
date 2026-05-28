@@ -18,29 +18,25 @@ export async function POST(req: Request) {
 
   const { group_id, invited_email } = parsed.data
 
-  // Use service client to bypass the self-referential RLS policy on group_members.
-  // The eq('user_id', user.id) filter ensures we only check the logged-in user's membership.
+  // Fetch group and validate ownership in a single query.
+  // Only the group owner can invite users.
   const serviceClient = createServiceClient()
-  const { data: membership } = await serviceClient
-    .from('group_members')
-    .select('id')
-    .eq('group_id', group_id)
-    .eq('user_id', user.id)
-    .single()
-
-  if (!membership) return NextResponse.json({ error: 'No sos miembro de este grupo' }, { status: 403 })
-
-  // Get group info for the email
   const { data: group } = await serviceClient
     .from('groups')
-    .select('name, invite_code')
+    .select('name, invite_code, owner_id')
     .eq('id', group_id)
     .single()
 
   if (!group) return NextResponse.json({ error: 'Grupo no encontrado' }, { status: 404 })
+  if (group.owner_id !== user.id) {
+    return NextResponse.json({ error: 'Solo el dueño del grupo puede invitar usuarios' }, { status: 403 })
+  }
 
-  // Store invitation (upsert to avoid duplicates)
-  const { error: inviteError } = await supabase
+  // Store invitation (upsert to avoid duplicates).
+  // Use service client — the group_invitations INSERT policy checks group_members via the
+  // self-referential RLS, which silently returns false and blocks the insert.
+  // Ownership was already verified above (group.owner_id === user.id).
+  const { error: inviteError } = await serviceClient
     .from('group_invitations')
     .upsert(
       { group_id, invited_email, invited_by: user.id, status: 'pending' },

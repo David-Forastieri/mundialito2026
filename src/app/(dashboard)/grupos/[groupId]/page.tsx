@@ -36,6 +36,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
 
   const ranking: RankingEntry[] = (rankingData || []) as RankingEntry[]
   const myEntry = ranking.find(r => r.user_id === user!.id)
+  const isOwner = user!.id === group.owner_id
 
   return (
     <div className="space-y-6">
@@ -70,7 +71,7 @@ export default async function GroupPage({ params }: { params: Promise<{ groupId:
             {member?.template_id ? 'Mi plantilla' : 'Cargar predicciones'}
           </div>
         </Link>
-        <InviteButton groupId={groupId} inviteCode={group.invite_code} />
+        {isOwner && <InviteButton groupId={groupId} inviteCode={group.invite_code} />}
       </div>
 
       <div>

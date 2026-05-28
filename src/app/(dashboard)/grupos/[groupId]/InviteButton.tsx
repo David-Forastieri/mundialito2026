@@ -42,6 +42,7 @@ export default function InviteButton({ groupId, inviteCode }: Props) {
             : `✓ Invitación registrada. Código: ${formattedCode}`,
         })
         setEmail('')
+        setTimeout(() => setOpen(false), 2500)
       }
     } finally {
       setLoading(false)
@@ -60,7 +61,7 @@ export default function InviteButton({ groupId, inviteCode }: Props) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4 bg-black/50"
+        <div className="fixed inset-0 z-60 flex items-end md:items-center justify-center p-4 pb-[calc(1rem+env(safe-area-inset-bottom)+5rem)] md:pb-4 bg-black/50"
           onClick={e => { if (e.target === e.currentTarget) setOpen(false) }}>
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-xl">
             <div className="flex items-center justify-between">
