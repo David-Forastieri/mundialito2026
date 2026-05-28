@@ -35,9 +35,18 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="text-5xl mb-3">⚽</div>
-          <h1 className="text-3xl font-bold text-gray-900">Mundial 2026</h1>
-          <p className="text-gray-600 mt-1">Iniciá sesión para jugar el prode</p>
+          <h1 className="text-3xl font-bold text-gray-900">Mundialito 2026</h1>
+          <p className="text-gray-600 mt-1">
+            {invitacion ? 'Iniciá sesión para unirte al grupo' : 'Iniciá sesión para jugar el prode'}
+          </p>
         </div>
+
+        {invitacion && (
+          <div className="mb-4 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 text-sm text-orange-700">
+            <span className="text-xl">🎉</span>
+            <span>Te invitaron a un grupo. Ingresá para unirte automáticamente.</span>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           {error && (
@@ -90,7 +99,10 @@ function LoginForm() {
 
           <p className="text-center text-sm text-gray-600 mt-6">
             ¿No tenés cuenta?{' '}
-            <Link href="/register" className="text-orange-500 hover:text-orange-600 font-medium">
+            <Link
+              href={invitacion ? `/register?invitacion=${invitacion}` : '/register'}
+              className="text-orange-500 hover:text-orange-600 font-medium"
+            >
               Registrate
             </Link>
           </p>

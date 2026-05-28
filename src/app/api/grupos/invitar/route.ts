@@ -60,7 +60,7 @@ export async function POST(req: Request) {
 
   const htmlContent = `
     <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-      <h2 style="color:#f97316">⚽ Mundial 2026 Prode</h2>
+      <h2 style="color:#f97316">⚽ Mundialito 2026 Prode</h2>
       <p>¡Hola! Te invitaron a unirte al grupo <strong>${group.name}</strong>.</p>
       <p>Usá este código de invitación:</p>
       <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:20px;text-align:center;margin:20px 0">
@@ -85,9 +85,9 @@ export async function POST(req: Request) {
           'api-key': brevoKey,
         },
         body: JSON.stringify({
-          sender: { name: 'Mundial 2026 Prode', email: senderEmail },
+          sender: { name: 'Mundialito 2026 Prode', email: senderEmail },
           to: [{ email: invited_email }],
-          subject: `Te invitaron al grupo "${group.name}" en Mundial 2026 Prode`,
+          subject: `Te invitaron al grupo "${group.name}" en Mundialito 2026 Prode`,
           htmlContent,
         }),
       })

@@ -8,9 +8,14 @@ interface Props {
 /**
  * Smart invitation redirect.
  *
- * – Logged-in user  → /grupos/unirse?code=…  (join immediately)
- * – Unknown user    → /register?invitacion=…  (register first, then join)
- * – No code         → /grupos/unirse           (fallback)
+ * – Logged-in user      → /grupos/unirse?code=…      (join immediately)
+ * – Unauthenticated     → /login?invitacion=…         (log in or register)
+ * – No code             → /grupos/unirse              (fallback)
+ *
+ * We always send unauthenticated users to /login (not /register) because
+ * we cannot tell from the invite code alone whether the recipient already
+ * has an account. The login page lets them sign in and links to /register
+ * (with the code preserved) for users who are genuinely new.
  */
 export default async function InvitacionPage({ searchParams }: Props) {
   const { code } = await searchParams
@@ -23,6 +28,6 @@ export default async function InvitacionPage({ searchParams }: Props) {
   if (user) {
     redirect(`/grupos/unirse?code=${code}`)
   } else {
-    redirect(`/register?invitacion=${code}`)
+    redirect(`/login?invitacion=${code}`)
   }
 }

@@ -1,7 +1,7 @@
 {
-  "name": "Mundial 2026 Prode",
-  "short_name": "Mundial 2026",
-  "description": "Seguí el fixture y jugá el prode del Mundial 2026",
+  "name": "Mundialito 2026 Prode",
+  "short_name": "Mundialito 2026",
+  "description": "Seguí el fixture y jugá el prode del Mundialito 2026",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

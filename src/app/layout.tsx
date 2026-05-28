@@ -3,16 +3,16 @@ import { Toaster } from 'sonner'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Mundial 2026 Prode',
+  title: 'Mundialito 2026 Prode',
   description: 'Seguí el Mundial 2026 y competí con amigos en el prode',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Mundial 2026',
+    title: 'Mundialito 2026',
   },
   openGraph: {
-    title: 'Mundial 2026 Prode',
+    title: 'Mundialito 2026 Prode',
     description: 'Seguí el fixture y competí en grupos de predicciones',
     type: 'website',
   },
