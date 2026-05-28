@@ -34,15 +34,17 @@ export default function InviteButton({ groupId, inviteCode }: Props) {
       const data = await res.json()
       if (!res.ok) {
         setResult({ type: 'error', message: data.error || 'Error al enviar la invitación' })
-      } else {
-        setResult({
-          type: 'success',
-          message: data.emailSent
-            ? `✓ Invitación enviada a ${email}`
-            : `✓ Invitación registrada. Código: ${formattedCode}`,
-        })
+      } else if (data.emailSent) {
+        setResult({ type: 'success', message: `✓ Invitación enviada a ${email}` })
         setEmail('')
         setTimeout(() => setOpen(false), 2500)
+      } else {
+        // Email failed — show code so the user can share it manually
+        setResult({
+          type: 'error',
+          message: `No se pudo enviar el email. Compartí el código manualmente: ${formattedCode}`,
+        })
+        console.warn('[InviteButton] emailError:', data.emailError)
       }
     } finally {
       setLoading(false)

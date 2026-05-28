@@ -52,6 +52,9 @@ export async function POST(req: Request) {
   const inviteCode = group.invite_code
   const formattedCode = `${inviteCode.slice(0, 4)}-${inviteCode.slice(4)}`
 
+  let emailSent = false
+  let emailError: string | null = null
+
   if (resendKey) {
     const emailBody = {
       from: 'Mundial 2026 Prode <onboarding@resend.dev>',
@@ -76,16 +79,32 @@ export async function POST(req: Request) {
       `,
     }
 
-    await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
-      body: JSON.stringify(emailBody),
-    })
+    try {
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
+        body: JSON.stringify(emailBody),
+      })
+      const resendData = await resendRes.json()
+      if (resendRes.ok) {
+        emailSent = true
+      } else {
+        emailError = resendData?.message ?? `Resend error ${resendRes.status}`
+        console.error('[invitar] Resend error:', resendData)
+      }
+    } catch (err) {
+      emailError = err instanceof Error ? err.message : 'fetch failed'
+      console.error('[invitar] Resend fetch error:', err)
+    }
+  } else {
+    emailError = 'RESEND_API_KEY not configured'
+    console.warn('[invitar] RESEND_API_KEY is not set — email skipped')
   }
 
   return NextResponse.json({
     success: true,
-    emailSent: !!resendKey,
+    emailSent,
+    emailError,
     inviteCode: formattedCode,
   })
 }
