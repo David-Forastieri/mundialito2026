@@ -39,7 +39,8 @@ export async function POST(req: Request) {
 
   if (existing) return NextResponse.json({ error: 'Ya sos miembro de este grupo' }, { status: 409 })
 
-  const { count: memberCount } = await supabase
+  // Use service client — the joining user isn't a member yet so RLS would return 0
+  const { count: memberCount } = await service
     .from('group_members')
     .select('id', { count: 'exact', head: true })
     .eq('group_id', group.id)

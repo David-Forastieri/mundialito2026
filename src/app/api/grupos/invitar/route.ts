@@ -18,8 +18,10 @@ export async function POST(req: Request) {
 
   const { group_id, invited_email } = parsed.data
 
-  // Verify the inviter is a member of the group
-  const { data: membership } = await supabase
+  // Use service client to bypass the self-referential RLS policy on group_members.
+  // The eq('user_id', user.id) filter ensures we only check the logged-in user's membership.
+  const serviceClient = createServiceClient()
+  const { data: membership } = await serviceClient
     .from('group_members')
     .select('id')
     .eq('group_id', group_id)
@@ -29,7 +31,6 @@ export async function POST(req: Request) {
   if (!membership) return NextResponse.json({ error: 'No sos miembro de este grupo' }, { status: 403 })
 
   // Get group info for the email
-  const serviceClient = createServiceClient()
   const { data: group } = await serviceClient
     .from('groups')
     .select('name, invite_code')
