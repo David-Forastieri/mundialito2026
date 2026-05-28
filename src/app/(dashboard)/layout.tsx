@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { DesktopNav, MobileNav } from '@/components/Nav'
+import PushManager from '@/components/PushManager'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -30,6 +31,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <MobileNav />
 
       <div className="md:hidden h-20" />
+      <PushManager />
     </div>
   )
 }

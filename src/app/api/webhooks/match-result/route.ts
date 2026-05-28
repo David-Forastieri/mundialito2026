@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { calculateMatchPoints } from '@/lib/scoring/calculator'
+import { sendPushToUser } from '@/lib/notifications/send'
 import { z } from 'zod'
 
 const WebhookSchema = z.object({
@@ -23,9 +24,12 @@ export async function POST(request: Request) {
   const supabase = createServiceClient()
 
   // Update match result
-  await supabase.from('matches').update({
-    home_score, away_score, status: 'finished', updated_at: new Date().toISOString()
-  }).eq('id', matchId)
+  const { data: match } = await supabase
+    .from('matches')
+    .update({ home_score, away_score, status: 'finished', updated_at: new Date().toISOString() })
+    .eq('id', matchId)
+    .select('home_team, away_team')
+    .single()
 
   // Get all groups with their scoring mode and predictions for this match
   const { data: predictions } = await supabase
@@ -34,7 +38,7 @@ export async function POST(request: Request) {
       id, template_id, home_pred, away_pred,
       prediction_templates (
         user_id,
-        group_members ( group_id, groups ( scoring_mode ) )
+        group_members ( group_id, groups ( id, name, scoring_mode ) )
       )
     `)
     .eq('match_id', matchId)
@@ -42,7 +46,7 @@ export async function POST(request: Request) {
 
   if (predictions && predictions.length > 0) {
     const scores = predictions.flatMap((p) => {
-      const template = p.prediction_templates as { user_id: string; group_members: { group_id: string; groups: { scoring_mode: string } }[] } | null
+      const template = p.prediction_templates as { user_id: string; group_members: { group_id: string; groups: { id: string; name: string; scoring_mode: string } }[] } | null
       if (!template) return []
 
       return template.group_members.map((gm) => {
@@ -65,10 +69,63 @@ export async function POST(request: Request) {
 
     if (scores.length > 0) {
       await supabase.from('match_scores').upsert(scores, { onConflict: 'prediction_id,group_id' })
-      // Lock predictions
       await supabase.from('predictions').update({ locked: true }).eq('match_id', matchId)
-      // Refresh totals
       await supabase.rpc('refresh_group_totals', { p_match_id: matchId })
+
+      // Send push notifications: one per (user, group) with points earned + current position
+      const matchLabel = match ? `${match.home_team} vs ${match.away_team}` : 'Partido'
+
+      // Collect unique group IDs to fetch rankings in one pass
+      const groupIds = [...new Set(scores.map(s => s.group_id))]
+
+      // Fetch rankings for all affected groups at once
+      const rankingsByGroup = new Map<string, { user_id: string; total_points: number; rank: number }[]>()
+      await Promise.all(
+        groupIds.map(async (gid) => {
+          const { data: members } = await supabase
+            .from('group_members')
+            .select('user_id, total_points')
+            .eq('group_id', gid)
+            .order('total_points', { ascending: false })
+          if (members) {
+            rankingsByGroup.set(
+              gid,
+              members.map((m, i) => ({ user_id: m.user_id, total_points: m.total_points, rank: i + 1 }))
+            )
+          }
+        })
+      )
+
+      // Group scores by (user_id, group_id) — a user may have multiple predictions per group
+      const userGroupPoints = new Map<string, { userId: string; groupId: string; groupName: string; points: number }>()
+      for (const s of scores) {
+        const template = (predictions.find(p => p.id === s.prediction_id)?.prediction_templates) as { user_id: string; group_members: { group_id: string; groups: { id: string; name: string; scoring_mode: string } }[] } | null
+        const groupName = template?.group_members.find(gm => gm.group_id === s.group_id)?.groups.name ?? ''
+        const key = `${s.user_id}:${s.group_id}`
+        const existing = userGroupPoints.get(key)
+        userGroupPoints.set(key, {
+          userId: s.user_id,
+          groupId: s.group_id,
+          groupName,
+          points: (existing?.points ?? 0) + s.points_earned,
+        })
+      }
+
+      await Promise.allSettled(
+        [...userGroupPoints.values()].map(({ userId, groupId, groupName, points }) => {
+          const ranking = rankingsByGroup.get(groupId)
+          const userRank = ranking?.find(r => r.user_id === userId)?.rank
+          const posText = userRank ? ` · Posición #${userRank}` : ''
+          const ptsText = points === 1 ? '1 pto' : `${points} pts`
+
+          return sendPushToUser(supabase, userId, {
+            title: `⚽ ${matchLabel}`,
+            body: `${ptsText} en ${groupName}${posText}`,
+            url: `/grupos/${groupId}`,
+            tag: `match-result-${matchId}-${groupId}`,
+          })
+        })
+      )
     }
   }
 
