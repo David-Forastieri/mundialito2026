@@ -4,11 +4,22 @@ import type { Database } from '@/types/database.types'
 
 type DB = SupabaseClient<Database>
 
-webpush.setVapidDetails(
-  process.env.VAPID_SUBJECT!,
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!,
-)
+// Lazy VAPID initialization — avoids build-time errors when env vars are
+// absent. Called once on first use; safe to call repeatedly (no-op after set).
+let vapidReady = false
+function ensureVapid(): boolean {
+  if (vapidReady) return true
+  const subject  = process.env.VAPID_SUBJECT
+  const pubKey   = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  const privKey  = process.env.VAPID_PRIVATE_KEY
+  if (!subject || !pubKey || !privKey) {
+    console.warn('[push] VAPID env vars not configured — notifications skipped')
+    return false
+  }
+  webpush.setVapidDetails(subject, pubKey, privKey)
+  vapidReady = true
+  return true
+}
 
 export interface PushPayload {
   title: string
@@ -18,6 +29,8 @@ export interface PushPayload {
 }
 
 export async function sendPushToUser(db: DB, userId: string, payload: PushPayload) {
+  if (!ensureVapid()) return   // skip silently if VAPID vars are missing
+
   const { data: profile } = await db
     .from('profiles')
     .select('push_token')
