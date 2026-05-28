@@ -7,7 +7,10 @@ import { signInWithEmail, signInWithGoogle } from '@/services/auth.service'
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const redirect = searchParams.get('redirect') || '/'
+  const invitacion = searchParams.get('invitacion')
+  const redirect = invitacion
+    ? `/grupos/unirse?code=${invitacion}`
+    : searchParams.get('redirect') || '/'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

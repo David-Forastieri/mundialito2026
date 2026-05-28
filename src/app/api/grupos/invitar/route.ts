@@ -65,7 +65,7 @@ export async function POST(req: Request) {
           <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:20px;text-align:center;margin:20px 0">
             <span style="font-size:28px;font-weight:900;font-family:monospace;color:#ea580c;letter-spacing:4px">${formattedCode}</span>
           </div>
-          <a href="${siteUrl}/grupos/unirse?code=${formattedCode}"
+          <a href="${siteUrl}/invitacion?code=${formattedCode}"
              style="display:block;background:#f97316;color:#fff;text-decoration:none;padding:14px 24px;border-radius:12px;text-align:center;font-weight:700;font-size:16px">
             Unirme al grupo
           </a>
