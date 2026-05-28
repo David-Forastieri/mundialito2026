@@ -35,10 +35,6 @@
     {
       "path": "/api/cron/sync-fixture",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/notify-predictions",
-      "schedule": "*/5 * * * *"
     }
   ]
 }
