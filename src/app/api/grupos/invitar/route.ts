@@ -45,8 +45,7 @@ export async function POST(req: Request) {
 
   if (inviteError) return NextResponse.json({ error: 'Error al crear la invitación' }, { status: 500 })
 
-  // Send email via Resend if configured
-  const resendKey = process.env.RESEND_API_KEY
+  // Send email via Brevo (no domain required — verified sender address only)
   const rawSiteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://mundialito2026-eight.vercel.app'
   const siteUrl = rawSiteUrl.startsWith('http://localhost') ? 'https://mundialito2026-eight.vercel.app' : rawSiteUrl
   const inviteCode = group.invite_code
@@ -55,50 +54,57 @@ export async function POST(req: Request) {
   let emailSent = false
   let emailError: string | null = null
 
-  if (resendKey) {
-    const emailBody = {
-      from: 'Mundial 2026 Prode <onboarding@resend.dev>',
-      to: [invited_email],
-      subject: `Te invitaron al grupo "${group.name}" en Mundial 2026 Prode`,
-      html: `
-        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
-          <h2 style="color:#f97316">⚽ Mundial 2026 Prode</h2>
-          <p>¡Hola! Te invitaron a unirte al grupo <strong>${group.name}</strong>.</p>
-          <p>Usá este código de invitación:</p>
-          <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:20px;text-align:center;margin:20px 0">
-            <span style="font-size:28px;font-weight:900;font-family:monospace;color:#ea580c;letter-spacing:4px">${formattedCode}</span>
-          </div>
-          <a href="${siteUrl}/invitacion?code=${formattedCode}"
-             style="display:block;background:#f97316;color:#fff;text-decoration:none;padding:14px 24px;border-radius:12px;text-align:center;font-weight:700;font-size:16px">
-            Unirme al grupo
-          </a>
-          <p style="margin-top:16px;font-size:12px;color:#9ca3af">
-            Este enlace expira en 7 días. Si no querés unirte, podés ignorar este email.
-          </p>
-        </div>
-      `,
-    }
+  // Email provider: Brevo (no domain required — just a verified sender address)
+  const brevoKey = process.env.BREVO_API_KEY
+  const senderEmail = process.env.EMAIL_SENDER   // verified sender in Brevo
 
+  const htmlContent = `
+    <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+      <h2 style="color:#f97316">⚽ Mundial 2026 Prode</h2>
+      <p>¡Hola! Te invitaron a unirte al grupo <strong>${group.name}</strong>.</p>
+      <p>Usá este código de invitación:</p>
+      <div style="background:#fff7ed;border:2px solid #fed7aa;border-radius:12px;padding:20px;text-align:center;margin:20px 0">
+        <span style="font-size:28px;font-weight:900;font-family:monospace;color:#ea580c;letter-spacing:4px">${formattedCode}</span>
+      </div>
+      <a href="${siteUrl}/invitacion?code=${formattedCode}"
+         style="display:block;background:#f97316;color:#fff;text-decoration:none;padding:14px 24px;border-radius:12px;text-align:center;font-weight:700;font-size:16px">
+        Unirme al grupo
+      </a>
+      <p style="margin-top:16px;font-size:12px;color:#9ca3af">
+        Este enlace expira en 7 días. Si no querés unirte, podés ignorar este email.
+      </p>
+    </div>
+  `
+
+  if (brevoKey && senderEmail) {
     try {
-      const resendRes = await fetch('https://api.resend.com/emails', {
+      const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
-        body: JSON.stringify(emailBody),
+        headers: {
+          'Content-Type': 'application/json',
+          'api-key': brevoKey,
+        },
+        body: JSON.stringify({
+          sender: { name: 'Mundial 2026 Prode', email: senderEmail },
+          to: [{ email: invited_email }],
+          subject: `Te invitaron al grupo "${group.name}" en Mundial 2026 Prode`,
+          htmlContent,
+        }),
       })
-      const resendData = await resendRes.json()
-      if (resendRes.ok) {
+      const brevoData = await brevoRes.json()
+      if (brevoRes.ok) {
         emailSent = true
       } else {
-        emailError = resendData?.message ?? `Resend error ${resendRes.status}`
-        console.error('[invitar] Resend error:', resendData)
+        emailError = brevoData?.message ?? `Brevo error ${brevoRes.status}`
+        console.error('[invitar] Brevo error:', brevoData)
       }
     } catch (err) {
       emailError = err instanceof Error ? err.message : 'fetch failed'
-      console.error('[invitar] Resend fetch error:', err)
+      console.error('[invitar] Brevo fetch error:', err)
     }
   } else {
-    emailError = 'RESEND_API_KEY not configured'
-    console.warn('[invitar] RESEND_API_KEY is not set — email skipped')
+    emailError = !brevoKey ? 'BREVO_API_KEY not configured' : 'EMAIL_SENDER not configured'
+    console.warn('[invitar] Email skipped:', emailError)
   }
 
   return NextResponse.json({
